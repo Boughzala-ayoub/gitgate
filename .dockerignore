@@ -1,0 +1,10 @@
+.git
+target/
+data/
+docs/
+scripts/
+frontend/node/
+frontend/node_modules/
+frontend/responsive-shots/
+src/main/resources/static/
+*.log

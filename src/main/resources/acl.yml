@@ -1,0 +1,35 @@
+# GitGate seed data (Phase 6: multi-tenant — per-repo membership).
+#
+# Loaded into the database on first run only. Access is now per (user, repo):
+#   - a repo has an owner (full access) and a visibility
+#   - collaborators get a membership, optionally narrowed by path scopes
+#   - a superadmin user has full access to everything (platform admin)
+#
+# Path matching is gitignore-flavored (**, *, ?). A plain name grants its subtree.
+# Seeded tokens equal "<username>123" so existing demos/scripts keep working.
+
+users:
+  - { username: admin, superadmin: true }
+  - { username: alice }
+  - { username: bob }
+
+repos:
+  # Two repos that give alice DIFFERENT access — the point of per-repo membership.
+  - name: app
+    owner: admin
+    collaborators:
+      - user: alice
+        scopes:
+          - { path: frontend, read: true,  write: true  }
+          - { path: "*.md",   read: true,  write: false }   # README is read-only for alice
+      - user: bob
+        scopes:
+          - { path: backend, read: true,  write: true  }
+          - { path: "*.md",  read: true,  write: false }
+
+  - name: web
+    owner: admin
+    collaborators:
+      - user: alice
+        scopes:
+          - { path: "**", read: true, write: false }         # alice: read-only EVERYTHING on web

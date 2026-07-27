@@ -1,0 +1,35 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    name: Build & test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      # `verify` runs the engine + end-to-end tests and builds the dashboard into the jar
+      # (frontend-maven-plugin fetches its own Node), so this one command is the whole gate.
+      - run: mvn -B verify
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: surefire-reports
+          path: target/surefire-reports/
+
+  docker:
+    name: Docker image
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t gitgate:ci .

@@ -1,0 +1,24 @@
+# Test-run config: in-memory database, scratch storage under target/ (wiped by `mvn clean`).
+# Spring test classes override the datasource name so each gets an isolated database.
+server:
+  port: 0
+
+spring:
+  application:
+    name: gitgate
+  datasource:
+    url: jdbc:h2:mem:gitgate-test;DB_CLOSE_DELAY=-1
+    username: sa
+    password: ""
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: true
+
+gitgate:
+  repo-root: ./target/test-data/repos
+  views-root: ./target/test-data/views
+
+logging:
+  level:
+    dev.gitgate: WARN

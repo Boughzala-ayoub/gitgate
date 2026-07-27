@@ -1,0 +1,321 @@
+/* GitGate dashboard — Primer-faithful (GitHub light theme). */
+
+:root {
+  --canvas: #ffffff;
+  --canvas-subtle: #f6f8fa;
+  --canvas-inset: #f6f8fa;
+  --border: #d0d7de;
+  --border-muted: #d8dee4;
+  --fg: #1f2328;
+  --fg-muted: #656d76;
+  --accent: #0969da;
+  --success-fg: #1a7f37;
+  --danger-fg: #cf222e;
+  --danger-border: rgba(255, 129, 130, 0.4);
+  --danger-canvas: #fff8f8;
+  --btn-primary-bg: #1f883d;
+  --btn-primary-hover: #1a7f37;
+  --btn-bg: #f6f8fa;
+  --btn-hover: #f3f4f6;
+  --btn-border: rgba(31, 35, 40, 0.15);
+  --header-bg: #24292f;
+  --header-fg: #ffffff;
+  --neutral-muted: rgba(175, 184, 193, 0.2);
+  --shadow-sm: 0 1px 0 rgba(31, 35, 40, 0.04);
+  --radius: 6px;
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif;
+  --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+}
+
+* { box-sizing: border-box; }
+
+html, body { margin: 0; }
+
+body {
+  background: var(--canvas);
+  color: var(--fg);
+  font-family: var(--font);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+:focus-visible { outline: 2px solid var(--accent); outline-offset: -1px; border-radius: 3px; }
+
+.mono { font-family: var(--mono); }
+.muted { color: var(--fg-muted); }
+.row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.between { justify-content: space-between; }
+.grow { flex: 1; }
+.stack { display: flex; flex-direction: column; gap: 6px; }
+
+/* ----- layout ----- */
+.container { max-width: 1280px; margin: 0 auto; padding: 0 16px; }
+@media (min-width: 768px) { .container { padding: 0 32px; } }
+.page { padding: 24px 0 64px; }
+
+/* ----- global header (dark) ----- */
+.AppHeader {
+  background: var(--header-bg);
+  color: var(--header-fg);
+}
+.AppHeader-inner {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 16px;
+  max-width: 1280px;
+  margin: 0 auto;
+}
+@media (min-width: 768px) { .AppHeader-inner { padding: 12px 32px; } }
+.brand { display: inline-flex; align-items: center; gap: 8px; color: var(--header-fg); font-weight: 600; font-size: 16px; }
+.brand:hover { text-decoration: none; }
+.AppHeader .who { color: rgba(255, 255, 255, 0.7); font-size: 13px; }
+
+/* ----- buttons ----- */
+.btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-family: inherit; font-size: 14px; font-weight: 500; line-height: 20px;
+  padding: 5px 16px; border-radius: var(--radius); cursor: pointer;
+  border: 1px solid var(--btn-border); background: var(--btn-bg); color: var(--fg);
+  transition: background-color .1s ease, border-color .1s ease;
+  white-space: nowrap;
+}
+.btn:hover { background: var(--btn-hover); border-color: rgba(31, 35, 40, 0.25); text-decoration: none; }
+.btn:disabled { opacity: .55; cursor: default; }
+.btn-primary { background: var(--btn-primary-bg); border-color: var(--btn-border); color: #fff; }
+.btn-primary:hover { background: var(--btn-primary-hover); }
+.btn-danger { color: var(--danger-fg); background: var(--canvas); }
+.btn-danger:hover { background: var(--danger-fg); border-color: var(--danger-fg); color: #fff; }
+.btn-sm { padding: 3px 12px; font-size: 12px; line-height: 18px; }
+.btn-invisible { background: transparent; border-color: transparent; color: inherit; }
+.btn-invisible:hover { background: rgba(255, 255, 255, 0.1); border-color: transparent; }
+.btn-link { background: none; border: none; color: var(--accent); padding: 0; cursor: pointer; font: inherit; }
+.btn-link:hover { text-decoration: underline; }
+
+/* ----- forms ----- */
+label.field-label { display: block; font-weight: 600; font-size: 14px; margin-bottom: 6px; }
+.form-control {
+  width: 100%; font: inherit; font-size: 14px; color: var(--fg);
+  padding: 5px 12px; border: 1px solid var(--border); border-radius: var(--radius);
+  background: var(--canvas); line-height: 20px;
+}
+.form-control:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(9, 105, 218, 0.3); }
+select.form-control { padding-right: 24px; }
+.field { margin-bottom: 14px; }
+.input-inline { width: auto; min-width: 180px; }
+
+/* ----- Box (Primer) ----- */
+.Box { background: var(--canvas); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 16px; }
+.Box-header {
+  padding: 12px 16px; background: var(--canvas-subtle);
+  border-bottom: 1px solid var(--border); border-radius: var(--radius) var(--radius) 0 0;
+  display: flex; align-items: center; gap: 10px;
+}
+.Box-title { font-size: 14px; font-weight: 600; margin: 0; }
+.Box-body { padding: 16px; }
+.Box-row { padding: 12px 16px; border-top: 1px solid var(--border-muted); display: flex; align-items: center; gap: 10px; }
+.Box-row:first-child { border-top: none; }
+.Box-row.hover:hover { background: var(--canvas-subtle); }
+.Box-danger { border-color: var(--danger-border); }
+.Box-danger .Box-header { background: var(--danger-canvas); border-color: var(--danger-border); color: var(--danger-fg); }
+
+/* ----- labels / pills ----- */
+.Label {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 12px; font-weight: 500; line-height: 18px;
+  padding: 0 7px; border: 1px solid var(--border); border-radius: 2em; color: var(--fg-muted);
+}
+.Label.role { text-transform: lowercase; }
+.tag-r { color: var(--success-fg); font-weight: 600; }
+.tag-w { color: var(--accent); font-weight: 600; }
+
+/* ----- underline nav (tabs) ----- */
+.UnderlineNav { border-bottom: 1px solid var(--border); display: flex; gap: 8px; margin: 16px 0 20px; overflow-x: auto; }
+.UnderlineNav-item {
+  background: none; border: none; cursor: pointer; font: inherit; font-size: 14px; color: var(--fg);
+  padding: 8px 12px; border-bottom: 2px solid transparent; margin-bottom: -1px; white-space: nowrap;
+}
+.UnderlineNav-item:hover { border-bottom-color: var(--border); }
+.UnderlineNav-item.selected { font-weight: 600; border-bottom-color: #fd8c73; }
+
+/* ----- page heading ----- */
+.page-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding-bottom: 16px; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
+.page-head h1 { font-size: 20px; margin: 0; }
+.repo-title { display: flex; align-items: center; gap: 8px; font-size: 20px; }
+.repo-title .name { font-weight: 600; color: var(--accent); }
+.repo-title .owner { color: var(--accent); }
+.repo-title .sep { color: var(--fg-muted); font-weight: 300; }
+
+/* ----- repo list ----- */
+.repo-item { padding: 16px 0; border-bottom: 1px solid var(--border-muted); }
+.repo-item:last-child { border-bottom: none; }
+.repo-item .name { font-size: 17px; font-weight: 600; }
+.repo-item .meta { margin-top: 6px; font-size: 12px; color: var(--fg-muted); display: flex; gap: 12px; flex-wrap: wrap; }
+
+/* ----- code browser ----- */
+.breadcrumb { font-size: 16px; display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+.breadcrumb .sep { color: var(--fg-muted); }
+.breadcrumb .crumb { background: none; border: none; padding: 0; cursor: pointer; font: inherit; color: var(--accent); }
+.breadcrumb .crumb:hover { text-decoration: underline; }
+.breadcrumb .crumb.root { font-weight: 600; }
+.file-row { display: flex; align-items: center; gap: 8px; padding: 8px 16px; border-top: 1px solid var(--border-muted); }
+.file-row:hover { background: var(--canvas-subtle); }
+.file-row .ic-folder { color: #54aeff; }
+.file-row .ic-file { color: var(--fg-muted); }
+.file-row a { color: var(--fg); }
+.file-row a:hover { color: var(--accent); }
+
+.blob { display: grid; grid-template-columns: auto 1fr; font-family: var(--mono); font-size: 12px; line-height: 20px; overflow: auto; }
+.blob .gutter { text-align: right; color: var(--fg-muted); padding: 8px 8px 8px 16px; user-select: none; border-right: 1px solid var(--border-muted); background: var(--canvas); white-space: pre; }
+.blob .code { padding: 8px 16px; white-space: pre; overflow-x: auto; }
+
+/* ----- flashes / blankslate ----- */
+.flash { padding: 10px 16px; border-radius: var(--radius); border: 1px solid var(--border); margin: 12px 0; font-size: 14px; }
+.flash-error { background: var(--danger-canvas); border-color: var(--danger-border); color: var(--danger-fg); }
+.blankslate { text-align: center; padding: 40px 16px; color: var(--fg-muted); }
+.secret { font-family: var(--mono); font-size: 13px; word-break: break-all; padding: 10px 12px; border: 1px solid var(--success-fg); border-radius: var(--radius); background: #dafbe1; color: #0a3a1f; }
+
+/* ----- table ----- */
+table.list { width: 100%; border-collapse: collapse; }
+table.list th { text-align: left; font-size: 12px; color: var(--fg-muted); font-weight: 600; padding: 8px 16px; border-bottom: 1px solid var(--border); }
+table.list td { padding: 10px 16px; border-top: 1px solid var(--border-muted); vertical-align: top; }
+
+/* ----- auth ----- */
+.auth-wrap { max-width: 340px; margin: 56px auto; padding: 0 16px; }
+.auth-mark { text-align: center; margin-bottom: 20px; }
+.auth-card { border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; background: var(--canvas-subtle); }
+.auth-switch { text-align: center; margin-top: 16px; border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; font-size: 13px; }
+
+/* ----- spinner ----- */
+.spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin .7s linear infinite; vertical-align: middle; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .spinner { animation: none; } }
+
+/* ===== polish pass (overrides above) ===== */
+
+/* GitHub gives default buttons a subtle drop shadow; transparent/link variants don't. */
+.btn { box-shadow: var(--shadow-sm); }
+.btn-invisible, .btn-link { box-shadow: none; }
+
+/* Active item in the dark global header. */
+.AppHeader-inner .active { background: rgba(255, 255, 255, 0.12); border-radius: var(--radius); }
+
+/* Repo list rows — GitHub-sized name link. */
+.repo-row { display: block; }
+.reponame { font-size: 16px; font-weight: 600; }
+
+/* A monospace line (clone URLs) that scrolls instead of overflowing on small screens. */
+.codeline {
+  font-family: var(--mono); font-size: 12px; color: var(--fg);
+  background: var(--canvas-subtle); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 5px 10px; display: block; overflow-x: auto; white-space: nowrap;
+}
+
+/* Let wide tables scroll horizontally on narrow viewports instead of squishing. */
+.Box:has(> table.list) { overflow-x: auto; }
+table.list { min-width: 480px; }
+
+/* Sign-in card on a plain canvas, like GitHub. */
+.auth-card { background: var(--canvas); }
+
+@media (max-width: 600px) {
+  .page-head h1 { font-size: 18px; }
+  .repo-title { font-size: 16px; }
+}
+
+/* ===== responsive overhaul (root-cause fixes for horizontal overflow) ===== */
+
+/* Flex children must be allowed to shrink below their content so inner scroll works
+   instead of the whole page widening. */
+.grow { min-width: 0; }
+.codeline { min-width: 0; }
+.mono { overflow-wrap: anywhere; }
+.repo-title { flex-wrap: wrap; }
+.input-inline { max-width: 100%; }
+/* `.meta` now lives on `.repo-row`/explore rows (not the old `.repo-item`), so define it standalone. */
+.meta { margin-top: 6px; font-size: 12px; color: var(--fg-muted); display: flex; gap: 4px 14px; flex-wrap: wrap; }
+
+/* Code view: the code column shrinks and scrolls on its own; the page never widens. */
+.blob { grid-template-columns: auto minmax(0, 1fr); overflow: visible; }
+.blob .code { overflow-x: auto; }
+
+/* File list & breadcrumbs: long names must wrap/shrink instead of pushing the row wide. */
+.file-row { flex-wrap: wrap; }
+.file-row .btn-link { min-width: 0; overflow-wrap: anywhere; text-align: left; }
+.breadcrumb { min-width: 0; }
+.breadcrumb .crumb { min-width: 0; overflow-wrap: anywhere; text-align: left; }
+
+/* Header: brand on the left, nav + user on the right. Below 768px the right side
+   collapses into a toggle ("hamburger") menu instead of awkwardly wrapping. */
+.AppHeader-inner { justify-content: flex-start; flex-wrap: wrap; gap: 8px 16px; }
+.hdr-toggle { display: none; margin-left: auto; }
+.hdr-menu { display: flex; align-items: center; gap: 8px 16px; flex: 1; min-width: 0; }
+.hdr-nav { display: flex; align-items: center; gap: 2px; flex-wrap: wrap; min-width: 0; }
+.hdr-user { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+.branch-select { appearance: none; -webkit-appearance: none; background: none; border: none; font: inherit; font-weight: 600; color: inherit; cursor: pointer; padding: 0 2px; max-width: 160px; }
+.search-input { flex: 1 1 220px; min-width: 0; max-width: 420px; }
+
+@media (max-width: 767px) {
+  .hdr-toggle { display: inline-flex; }
+  .hdr-menu { display: none; flex-basis: 100%; flex-direction: column; align-items: stretch; gap: 4px; padding-top: 4px; }
+  .hdr-menu.open { display: flex; }
+  .hdr-nav { flex-direction: column; align-items: stretch; gap: 2px; }
+  .hdr-nav .btn { justify-content: flex-start; }
+  .hdr-user { margin-left: 0; justify-content: space-between; margin-top: 6px; padding-top: 8px; border-top: 1px solid rgba(255, 255, 255, 0.12); }
+  /* In the dropdown there's room, so always show the username + sign-out label. */
+  .AppHeader .who { display: inline; }
+  .signout-label { display: inline; }
+}
+
+@media (max-width: 480px) {
+  .container { padding: 0 12px; }
+  .page { padding: 16px 0 48px; }
+  .Box-header { padding: 10px 12px; }
+  .Box-body { padding: 12px; }
+  .Box-row { padding: 10px 12px; }
+  .file-row { padding: 9px 12px; }
+  table.list th, table.list td { padding: 8px 12px; }
+
+  /* Inline inputs/selects go full-width so paired controls stack cleanly instead
+     of an input hogging the row and pushing buttons onto awkward extra lines. */
+  .input-inline { min-width: 0; width: 100%; }
+  .search-input { flex: 1 1 140px; }
+  .branch-select { max-width: 120px; }
+
+  /* Tighter auth card on the smallest phones. */
+  .auth-wrap { max-width: 100%; margin: 32px auto; padding: 0 12px; }
+}
+
+/* ===== responsive tables: collapse to stacked, labelled cards on phones ===== */
+/* Below 600px a 4-column table can't fit; horizontal scroll would hide the action
+   buttons (Remove / Mint token). Instead each row becomes a card and every cell is
+   prefixed with its column name via a data-label attribute on the <td>. */
+@media (max-width: 600px) {
+  table.list { min-width: 0; }
+  /* Visually hide the header row (still read by screen readers). */
+  table.list thead {
+    position: absolute; width: 1px; height: 1px;
+    padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); border: 0;
+  }
+  table.list tr {
+    display: block; padding: 10px 0;
+    border-top: 1px solid var(--border-muted);
+  }
+  table.list tr:first-child { border-top: none; }
+  table.list td {
+    display: block; border: none; padding: 3px 12px;
+    overflow-wrap: anywhere;
+  }
+  table.list td[data-label]::before {
+    content: attr(data-label);
+    display: inline-block; min-width: 84px;
+    font-weight: 600; color: var(--fg-muted);
+  }
+  /* Action cell (no label): give its button room and full reach. */
+  table.list td:last-child { margin-top: 6px; }
+  table.list td:last-child .btn { width: 100%; justify-content: center; }
+}

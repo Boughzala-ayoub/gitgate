@@ -1,0 +1,30 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: gitgate
+  datasource:
+    url: jdbc:h2:file:${gitgate.data-dir}/gitgate;AUTO_SERVER=TRUE
+    username: sa
+    password: ""
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: true
+
+gitgate:
+  # Everything persistent lives here — database, canonical repos, materialized views.
+  # Override with GITGATE_DATA_DIR (the Docker image points it at the /data volume).
+  data-dir: ./data
+  # Bare canonical repositories.
+  repo-root: ${gitgate.data-dir}/repos
+  # Per-user filtered views, re-materialized from canonical on demand.
+  views-root: ${gitgate.data-dir}/views
+  # Token seeded for the acl.yml superadmin on first run. Set GITGATE_ADMIN_TOKEN in any
+  # deployment you care about — otherwise the demo default is used and logged as a warning.
+  admin-token: ""
+
+logging:
+  level:
+    dev.gitgate: DEBUG
