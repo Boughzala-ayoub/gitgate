@@ -186,10 +186,12 @@ function AccessControl({
       </button>
     )
   }
-  const options: Array<{ key: Access; text: string }> = [
-    { key: 'none', text: 'No access' },
-    { key: 'read', text: 'Read' },
-    { key: 'write', text: 'Write' },
+  // Write always includes read: the server merges a push using the paths the pusher can see, so
+  // write-without-read would silently drop their changes. One choice, three levels.
+  const options: Array<{ key: Access; text: string; title: string }> = [
+    { key: 'none', text: 'No access', title: 'Hidden from them entirely' },
+    { key: 'read', text: 'Read', title: 'Can clone and browse, cannot change' },
+    { key: 'write', text: 'Read + write', title: 'Can clone, browse and push changes' },
   ]
   return (
     <div className="segmented" role="group" aria-label={`Access to ${label}`}>
@@ -198,6 +200,7 @@ function AccessControl({
           key={o.key}
           className={cx('segmented-item', access === o.key && 'selected')}
           aria-pressed={access === o.key}
+          title={o.title}
           onClick={() => onSet(o.key)}
         >
           {o.text}
@@ -236,7 +239,7 @@ function SelectionSummary({
           {[...value].sort((a, b) => a.path.localeCompare(b.path)).map((s) => (
             <span className="chip" key={s.path}>
               <code>{s.path}</code>
-              {mode === 'rw' && <span className={cx('chip-access', s.write && 'write')}>{s.write ? 'write' : 'read'}</span>}
+              {mode === 'rw' && <span className={cx('chip-access', s.write && 'write')}>{s.write ? 'read + write' : 'read'}</span>}
               <button
                 className="chip-x"
                 aria-label={`Remove ${s.path}`}

@@ -61,6 +61,25 @@ class RepoLifecycleTest {
     }
 
     @Test
+    void changingAnExistingCollaboratorsAccessReplacesItInsteadOfFailing() {
+        repoService.create("admin", "shared", "PRIVATE");
+        repoService.addCollaborator("admin", "shared", "alice", "READ",
+                List.of(new Dtos.ScopeDto("docs", true, false)));
+
+        // Re-saving the same person is an update, not a second membership. Deleting and
+        // re-inserting the row here trips the unique (repo, user) index and 500s.
+        Dtos.CollaboratorDto updated = repoService.addCollaborator("admin", "shared", "alice", "WRITE",
+                List.of(new Dtos.ScopeDto("frontend", true, true)));
+
+        assertEquals("WRITE", updated.role());
+        List<Dtos.CollaboratorDto> people = repoService.collaborators("admin", "shared");
+        assertEquals(1, people.size(), "the collaborator must not be duplicated");
+        assertEquals(List.of("frontend"), people.get(0).scopes().stream().map(Dtos.ScopeDto::path).toList(),
+                "old scopes are replaced, not accumulated");
+        assertTrue(people.get(0).scopes().get(0).write(), "read+write must survive the round trip");
+    }
+
+    @Test
     void deletingARepoRemovesItsCanonicalStoreAndMaterializedViews() throws Exception {
         repoService.create("admin", "throwaway", "PRIVATE");
         try (Repository canonical = gitRepos.open("throwaway")) {

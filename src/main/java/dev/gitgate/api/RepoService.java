@@ -155,9 +155,16 @@ public class RepoService {
         if (repo.getOwner() != null && repo.getOwner().getId().equals(collaborator.getId())) {
             throw new IllegalArgumentException("the owner already has full access");
         }
-        // Upsert: drop any existing membership, then recreate with the requested role + scopes.
-        memberships.findByRepoAndUser(repo, collaborator).ifPresent(this::deleteMembership);
-        Membership membership = memberships.save(new Membership(repo, collaborator, parseRole(role)));
+        // Upsert. Update the existing row rather than delete-and-recreate it: within one
+        // transaction Hibernate orders the INSERT before the DELETE, which collides with the
+        // unique (repo, user) index and fails the whole request.
+        Membership membership = memberships.findByRepoAndUser(repo, collaborator)
+                .map(existing -> {
+                    existing.setRole(parseRole(role));
+                    scopes.findByMembership(existing).forEach(scopes::delete);
+                    return memberships.save(existing);
+                })
+                .orElseGet(() -> memberships.save(new Membership(repo, collaborator, parseRole(role))));
         List<ScopeDto> saved = new ArrayList<>();
         if (scopeReqs != null) {
             for (ScopeDto s : scopeReqs) {

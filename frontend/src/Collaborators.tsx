@@ -69,7 +69,7 @@ export default function Collaborators({ name }: { name: string }) {
                       : c.scopes.map((s) => (
                         <span className="chip" key={s.path}>
                           <code>{s.path}</code>
-                          <span className={cx('chip-access', s.write && 'write')}>{s.write ? 'write' : 'read'}</span>
+                          <span className={cx('chip-access', s.write && 'write')}>{s.write ? 'read + write' : 'read'}</span>
                         </span>
                       ))}
                   </div>
@@ -165,7 +165,7 @@ function AccessEditor({
         <span className="field-label">Which files can they see?</span>
         <p className="field-hint">
           Select nothing to give access to the whole repository. Selecting a folder includes
-          everything inside it.
+          everything inside it, and <b>Read + write</b> grants both.
         </p>
         <PathPicker repo={repo} mode="rw" value={scopes} onChange={setScopes} />
       </div>

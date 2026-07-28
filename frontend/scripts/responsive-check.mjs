@@ -59,6 +59,7 @@ async function overflow(page) {
 }
 
 const failures = []
+const skipped = []
 
 async function check(page, w, name, fn) {
   if (fn) await fn()
@@ -132,6 +133,14 @@ try {
       await sleep(700) // tree loads over the network
       await check(page, w, 'settings-add-person')
 
+      // An empty repository renders "no commits yet" and has no tree to exercise. Say so
+      // loudly rather than reporting a pass that skipped the densest part of the UI.
+      const hasTree = await page.evaluate(() => !!document.querySelector('.picker-row'))
+      if (!hasTree) {
+        console.log(`  [SKIP] picker states at ${w}px — the repo has no commits, so there is no file tree`)
+        skipped.push(`picker@${w}`)
+      }
+
       // Expand a folder: deeper indentation is where a tree starts pushing rows wide.
       const expanded = await page.evaluate(() => {
         const t = document.querySelector('.picker-twisty[aria-expanded="false"]')
@@ -142,7 +151,7 @@ try {
         await sleep(700)
         // Grant something so the chip summary renders too.
         await page.evaluate(() => {
-          const seg = [...document.querySelectorAll('.segmented-item')].find((b) => b.textContent.trim() === 'Write')
+          const seg = [...document.querySelectorAll('.segmented-item')].find((b) => b.textContent.trim() === 'Read + write')
           if (seg) seg.click()
         })
         await check(page, w, 'settings-tree-expanded')
@@ -155,7 +164,7 @@ try {
         if (!card) return false
         card.click(); return true
       })
-      if (wentPublic) {
+      if (wentPublic && hasTree) {
         await page.waitForSelector('.picker-toggle')
         await sleep(700)
         await check(page, w, 'settings-public-paths')
@@ -203,5 +212,9 @@ if (failures.length) {
   console.error(`\nFAILED — horizontal overflow in ${failures.length} view(s):`)
   failures.forEach((f) => console.error('  - ' + f))
   process.exit(1)
+}
+if (skipped.length) {
+  console.warn(`\nNote — ${skipped.length} state(s) were not exercised: ${skipped.join(', ')}`)
+  console.warn('Push a repository with files to cover the path picker.')
 }
 console.log('\nPASS — no horizontal overflow at any width.')
