@@ -183,6 +183,9 @@ A working multi-tenant Git platform, not a proof of concept.
 - **Multi-tenant**: repos have an owner + collaborators; access is keyed by `(user, repo)` with
   per-collaborator path scopes.
 - **Accounts & self-service**: public signup/login; create your own repos; scope collaborators.
+- **Point-and-click permissions**: repo settings show the actual file tree — grant a person
+  read or write on a folder or a single file by clicking it, and see at a glance which paths are
+  covered by a parent folder or a pattern.
 - **Public & anonymous access**, including **partially-public repos** (public path globs).
 - **In-browser code browser** served strictly from the viewer's filtered view (access control is
   automatic — a hidden file 404s even by direct URL).
@@ -313,7 +316,16 @@ cd frontend && npm run check:responsive          # against http://localhost:8080
 
 It exits non-zero on overflow (so it can gate a build). Env: `RESP_BASE`, `RESP_WIDTHS`,
 `RESP_USER`/`RESP_PASS`, `CHROME`. Tables collapse to labelled cards below 600px; the header
-collapses to a hamburger below 768px; inputs go full-width on phones.
+collapses to a hamburger below 768px; inputs go full-width on phones. The check also opens the
+permission picker and expands its tree — the interactive states are where overflow hides.
+
+```bash
+cd frontend && npm run check:paths        # browser path-matching agrees with the server
+```
+
+`src/paths.ts` mirrors the server's `GlobMatcher` so the settings UI can explain *why* a file is
+accessible (“via `*.md`”). If the two drift the UI mislabels access, so the same cases as the Java
+`GlobMatcherTest` are asserted here.
 
 ---
 

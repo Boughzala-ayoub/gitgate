@@ -319,3 +319,122 @@ table.list { min-width: 480px; }
   table.list td:last-child { margin-top: 6px; }
   table.list td:last-child .btn { width: 100%; justify-content: center; }
 }
+
+/* ===== settings: section headers with a subtitle ===== */
+.Box-header.between { align-items: flex-start; }
+.Box-subtitle { margin: 4px 0 0; font-size: 12px; font-weight: 400; color: var(--fg-muted); max-width: 62ch; }
+.field-label { display: block; font-weight: 600; font-size: 14px; margin-bottom: 4px; }
+.field-hint { margin: 0 0 10px; font-size: 12px; color: var(--fg-muted); max-width: 68ch; }
+.panel { background: var(--canvas-subtle); border-top: 1px solid var(--border-muted); }
+
+/* ===== people with access ===== */
+.person { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-top: 1px solid var(--border-muted); }
+.person:hover { background: var(--canvas-subtle); }
+.avatar {
+  flex: none; width: 32px; height: 32px; border-radius: 50%;
+  background: var(--accent); color: #fff;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 600; letter-spacing: .3px;
+}
+.person-main { flex: 1; min-width: 0; }
+.person-name { font-weight: 600; }
+.person-scopes { margin-top: 4px; display: flex; flex-wrap: wrap; gap: 4px; font-size: 12px; }
+.person-actions { display: flex; gap: 6px; flex: none; }
+
+/* ===== chips (a granted path) ===== */
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip {
+  display: inline-flex; align-items: center; gap: 6px; max-width: 100%;
+  padding: 2px 4px 2px 8px; border: 1px solid var(--border); border-radius: 999px;
+  background: var(--canvas); font-size: 12px;
+}
+.chip code { font-family: var(--mono); font-size: 11px; overflow-wrap: anywhere; }
+.chip-access {
+  font-size: 10px; text-transform: uppercase; letter-spacing: .4px; font-weight: 600;
+  color: var(--success-fg); background: #dafbe1; border-radius: 999px; padding: 1px 6px;
+}
+.chip-access.write { color: #9a6700; background: #fff8c5; }
+.chip-x {
+  border: none; background: none; cursor: pointer; color: var(--fg-muted);
+  font-size: 14px; line-height: 1; padding: 2px 6px; border-radius: 999px;
+}
+.chip-x:hover { background: var(--neutral-muted); color: var(--danger-fg); }
+
+/* ===== path picker ===== */
+.picker { border: 1px solid var(--border); border-radius: var(--radius); background: var(--canvas); max-width: 760px; }
+.picker-tree { max-height: 320px; overflow-y: auto; overflow-x: hidden; }
+.picker-empty { padding: 16px; color: var(--fg-muted); font-size: 13px; }
+.picker-row {
+  display: flex; align-items: center; gap: 8px;
+  padding: 5px 10px; border-bottom: 1px solid var(--border-muted); min-height: 36px;
+}
+.picker-row:last-child { border-bottom: none; }
+.picker-row:hover { background: var(--canvas-subtle); }
+.picker-row.is-granted { background: #ddf4ff40; }
+.picker-name { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0; }
+.picker-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
+.picker-hint { color: var(--fg-muted); }
+.picker-twisty {
+  flex: none; width: 20px; height: 20px; padding: 0; border: none; background: none;
+  cursor: pointer; color: var(--fg-muted); border-radius: 3px;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.picker-twisty:hover { background: var(--neutral-muted); }
+.picker-inherited { flex: none; font-size: 11px; color: var(--fg-muted); }
+.picker-inherited code { font-family: var(--mono); }
+.picker-summary { border-top: 1px solid var(--border); padding: 10px; background: var(--canvas-subtle); border-radius: 0 0 var(--radius) var(--radius); }
+.picker-summary-head { font-size: 12px; margin-bottom: 8px; }
+.picker-summary .chips { margin-bottom: 10px; }
+.picker-pattern { display: flex; gap: 6px; }
+.picker-pattern .form-control { flex: 1; min-width: 0; font-size: 12px; }
+
+/* ===== segmented control (no access / read / write) ===== */
+.segmented { display: inline-flex; flex: none; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; background: var(--canvas); }
+.segmented-item {
+  border: none; background: none; cursor: pointer; font: inherit; font-size: 12px;
+  padding: 3px 10px; color: var(--fg-muted); border-left: 1px solid var(--border); white-space: nowrap;
+}
+.segmented-item:first-child { border-left: none; }
+.segmented-item:hover { background: var(--canvas-subtle); }
+.segmented-item.selected { background: var(--accent); color: #fff; font-weight: 600; }
+
+/* Public/private toggle used for public paths. */
+.picker-toggle {
+  flex: none; border: 1px solid var(--border); border-radius: var(--radius); background: var(--canvas);
+  font: inherit; font-size: 12px; padding: 3px 12px; cursor: pointer; color: var(--fg-muted);
+}
+.picker-toggle.on { background: var(--success-fg); border-color: var(--success-fg); color: #fff; font-weight: 600; }
+
+/* ===== selectable cards (role, visibility) ===== */
+.role-options, .choice-cards { display: grid; gap: 8px; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+.role-option, .choice-card {
+  display: flex; flex-direction: column; gap: 2px; text-align: left;
+  padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius);
+  background: var(--canvas); cursor: pointer; font: inherit;
+}
+.role-option:hover, .choice-card:hover { background: var(--canvas-subtle); }
+.role-option.selected, .choice-card.selected { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); background: #ddf4ff40; }
+.role-option-name, .choice-card-title { font-weight: 600; font-size: 13px; display: flex; align-items: center; gap: 6px; }
+.role-option-hint, .choice-card-hint { font-size: 12px; color: var(--fg-muted); }
+
+/* ===== phones: reshape rather than scroll ===== */
+@media (max-width: 600px) {
+  .Box-header.between { flex-direction: column; gap: 10px; }
+  .Box-header.between .btn { width: 100%; justify-content: center; }
+
+  /* Name on one line, the access control full-width underneath. */
+  .picker-row { flex-direction: column; align-items: stretch; gap: 6px; padding: 8px 10px; }
+  .picker-name { width: 100%; }
+  .picker-label { white-space: normal; overflow-wrap: anywhere; }
+  .segmented { display: flex; width: 100%; }
+  .segmented-item { flex: 1; text-align: center; padding: 5px 4px; }
+  .picker-toggle { width: 100%; padding: 5px 12px; }
+  .picker-inherited { align-self: flex-start; }
+
+  /* Person rows stack; actions get full reach instead of being pushed off-screen. */
+  .person { flex-wrap: wrap; gap: 8px 10px; }
+  .person-main { flex-basis: 100%; order: 2; }
+  .person-actions { order: 4; width: 100%; }
+  .person-actions .btn { flex: 1; justify-content: center; }
+  .Label.role { order: 3; }
+}

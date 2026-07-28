@@ -18,7 +18,7 @@ import { fileURLToPath } from 'node:url'
 const BASE = (process.env.RESP_BASE || 'http://localhost:8080').replace(/\/$/, '') + '/'
 const USER = process.env.RESP_USER || 'admin'
 const PASS = process.env.RESP_PASS || 'admin123'
-const WIDTHS = (process.env.RESP_WIDTHS || '320,375,768,1024').split(',').map((w) => parseInt(w.trim(), 10))
+const WIDTHS = (process.env.RESP_WIDTHS || '320,375,768,1024,1280').split(',').map((w) => parseInt(w.trim(), 10))
 
 const here = dirname(fileURLToPath(import.meta.url))
 const OUT = resolve(here, '..', 'responsive-shots')
@@ -117,13 +117,54 @@ try {
     await sleep(600)
     await check(page, w, 'repo-code')
 
-    // settings (visibility + collaborators table + danger zone), if present
+    // settings (visibility + people + danger zone), if present
     const hasSettings = await page.evaluate(() =>
       [...document.querySelectorAll('.UnderlineNav-item')].some((e) => e.textContent.includes('Settings')))
     if (hasSettings) {
       await clickText(page, '.UnderlineNav-item', 'Settings')
       await page.waitForSelector('.Box-danger')
       await check(page, w, 'repo-settings')
+
+      // The path picker is the densest thing in the UI — a file tree, a per-row access
+      // control and a chip list. Check it OPEN, not just the collapsed settings page.
+      await clickText(page, '.btn', 'Add people')
+      await page.waitForSelector('.picker')
+      await sleep(700) // tree loads over the network
+      await check(page, w, 'settings-add-person')
+
+      // Expand a folder: deeper indentation is where a tree starts pushing rows wide.
+      const expanded = await page.evaluate(() => {
+        const t = document.querySelector('.picker-twisty[aria-expanded="false"]')
+        if (!t) return false
+        t.click(); return true
+      })
+      if (expanded) {
+        await sleep(700)
+        // Grant something so the chip summary renders too.
+        await page.evaluate(() => {
+          const seg = [...document.querySelectorAll('.segmented-item')].find((b) => b.textContent.trim() === 'Write')
+          if (seg) seg.click()
+        })
+        await check(page, w, 'settings-tree-expanded')
+      }
+      await clickText(page, '.btn', 'Cancel')
+
+      // Public-paths picker (read-only mode) under Visibility.
+      const wentPublic = await page.evaluate(() => {
+        const card = [...document.querySelectorAll('.choice-card')].find((c) => c.textContent.includes('Public'))
+        if (!card) return false
+        card.click(); return true
+      })
+      if (wentPublic) {
+        await page.waitForSelector('.picker-toggle')
+        await sleep(700)
+        await check(page, w, 'settings-public-paths')
+        // Leave the repo as we found it.
+        await page.evaluate(() => {
+          const card = [...document.querySelectorAll('.choice-card')].find((c) => c.textContent.includes('Private'))
+          if (card) card.click()
+        })
+      }
     }
 
     // back -> Explore

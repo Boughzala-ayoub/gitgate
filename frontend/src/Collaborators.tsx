@@ -1,93 +1,182 @@
 import { useState } from 'react'
 import { api } from './api'
-import { ErrorNote, Spinner, useAsync } from './ui'
+import { PlusIcon, XIcon } from './icons'
+import { cx, ErrorNote, Spinner, useAsync } from './ui'
+import PathPicker from './PathPicker'
 import type { Collaborator, Scope } from './types'
+
+const ROLES = [
+  { key: 'READ', text: 'Read', hint: 'Clone and browse' },
+  { key: 'WRITE', text: 'Write', hint: 'Clone and push' },
+  { key: 'ADMIN', text: 'Admin', hint: 'Manage collaborators' },
+]
 
 export default function Collaborators({ name }: { name: string }) {
   const collabs = useAsync<Collaborator[]>(() => api.collaborators(name), [name])
+  const [editing, setEditing] = useState<string | null>(null)
+  const [adding, setAdding] = useState(false)
   const [error, setError] = useState('')
 
   async function remove(username: string) {
+    if (!confirm(`Remove ${username} from this repository?`)) return
     setError('')
     try { await api.removeCollaborator(name, username); collabs.reload() }
     catch (e) { setError(e instanceof Error ? e.message : 'Failed') }
   }
 
   return (
-    <div className="Box">
-      <div className="Box-header"><h2 className="Box-title">Collaborators</h2></div>
-      {collabs.error && <div className="Box-body"><ErrorNote message={collabs.error} /></div>}
-      {!collabs.data ? <div className="Box-body"><Spinner /></div> : (
-        <table className="list">
-          <thead><tr><th>User</th><th>Role</th><th>Path scopes</th><th /></tr></thead>
-          <tbody>
-            {collabs.data.map((c) => (
-              <tr key={c.username}>
-                <td className="mono" data-label="User">{c.username}</td>
-                <td data-label="Role"><span className="Label role">{c.role.toLowerCase()}</span></td>
-                <td data-label="Path scopes">
-                  {c.scopes.length === 0 ? <span className="muted">whole repo</span> : c.scopes.map((s, i) => (
-                    <div key={i} className="mono">
-                      {s.path} {s.read && <span className="tag-r">read</span>} {s.write && <span className="tag-w">write</span>}
-                    </div>
-                  ))}
-                </td>
-                <td><button className="btn btn-danger btn-sm" onClick={() => remove(c.username)}>Remove</button></td>
-              </tr>
-            ))}
-            {collabs.data.length === 0 && <tr><td colSpan={4} className="muted">No collaborators yet.</td></tr>}
-          </tbody>
-        </table>
-      )}
-      <div className="Box-body" style={{ borderTop: '1px solid var(--border-muted)' }}>
-        {error && <ErrorNote message={error} />}
-        <AddCollaborator name={name} onAdded={collabs.reload} />
+    <section className="Box">
+      <div className="Box-header between">
+        <div>
+          <h2 className="Box-title">People with access</h2>
+          <p className="Box-subtitle">Grant access to the whole repository, or only to certain files and folders.</p>
+        </div>
+        <button className="btn btn-primary btn-sm" onClick={() => { setAdding(true); setEditing(null) }}>
+          <PlusIcon size={14} /> Add people
+        </button>
       </div>
-    </div>
+
+      {error && <div className="Box-body"><ErrorNote message={error} /></div>}
+      {collabs.error && <div className="Box-body"><ErrorNote message={collabs.error} /></div>}
+
+      {adding && (
+        <div className="Box-body panel">
+          <AccessEditor
+            repo={name}
+            onCancel={() => setAdding(false)}
+            onSaved={() => { setAdding(false); collabs.reload() }}
+          />
+        </div>
+      )}
+
+      {!collabs.data ? <div className="Box-body"><Spinner /></div> : (
+        <>
+          {collabs.data.length === 0 && !adding && (
+            <div className="blankslate">
+              <p>Only you can see this repository.</p>
+              <button className="btn btn-sm" onClick={() => setAdding(true)}>Add your first collaborator</button>
+            </div>
+          )}
+          {collabs.data.map((c) => (
+            <div key={c.username}>
+              <div className="person">
+                <span className="avatar" aria-hidden="true">{c.username.slice(0, 2).toUpperCase()}</span>
+                <div className="person-main">
+                  <div className="person-name">{c.username}</div>
+                  <div className="person-scopes">
+                    {c.scopes.length === 0
+                      ? <span className="muted">Access to the entire repository</span>
+                      : c.scopes.map((s) => (
+                        <span className="chip" key={s.path}>
+                          <code>{s.path}</code>
+                          <span className={cx('chip-access', s.write && 'write')}>{s.write ? 'write' : 'read'}</span>
+                        </span>
+                      ))}
+                  </div>
+                </div>
+                <span className="Label role">{c.role.toLowerCase()}</span>
+                <div className="person-actions">
+                  <button className="btn btn-sm" onClick={() => { setEditing(editing === c.username ? null : c.username); setAdding(false) }}>
+                    {editing === c.username ? 'Close' : 'Manage access'}
+                  </button>
+                  <button className="btn btn-danger btn-sm" aria-label={`Remove ${c.username}`} onClick={() => remove(c.username)}>
+                    <XIcon size={14} />
+                  </button>
+                </div>
+              </div>
+              {editing === c.username && (
+                <div className="Box-body panel">
+                  <AccessEditor
+                    repo={name}
+                    existing={c}
+                    onCancel={() => setEditing(null)}
+                    onSaved={() => { setEditing(null); collabs.reload() }}
+                  />
+                </div>
+              )}
+            </div>
+          ))}
+        </>
+      )}
+    </section>
   )
 }
 
-function AddCollaborator({ name, onAdded }: { name: string; onAdded: () => void }) {
-  const [username, setUsername] = useState('')
-  const [role, setRole] = useState('WRITE')
-  const [scopes, setScopes] = useState<Scope[]>([{ path: '', read: true, write: false }])
+/**
+ * Add a collaborator or change an existing one's access. The server upserts by (repo, user), so
+ * both cases are the same request — editing is just adding with the username locked.
+ */
+function AccessEditor({
+  repo, existing, onCancel, onSaved,
+}: {
+  repo: string
+  existing?: Collaborator
+  onCancel: () => void
+  onSaved: () => void
+}) {
+  const [username, setUsername] = useState(existing?.username ?? '')
+  const [role, setRole] = useState(existing?.role ?? 'WRITE')
+  const [scopes, setScopes] = useState<Scope[]>(existing?.scopes ?? [])
   const [error, setError] = useState('')
+  const [saving, setSaving] = useState(false)
 
-  function patch(i: number, p: Partial<Scope>) {
-    setScopes(scopes.map((s, idx) => (idx === i ? { ...s, ...p } : s)))
-  }
-
-  async function add() {
-    setError('')
+  async function save() {
+    setError(''); setSaving(true)
     try {
-      await api.addCollaborator(name, { username, role, scopes: scopes.filter((s) => s.path.trim()) })
-      setUsername(''); setScopes([{ path: '', read: true, write: false }]); onAdded()
-    } catch (e) { setError(e instanceof Error ? e.message : 'Failed') }
+      await api.addCollaborator(repo, { username: username.trim(), role, scopes })
+      onSaved()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed')
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (
-    <div>
-      <label className="field-label">Add a collaborator</label>
-      <div className="row" style={{ marginBottom: 10 }}>
-        <input className="form-control input-inline" placeholder="username" value={username} onChange={(e) => setUsername(e.target.value)} />
-        <select className="form-control input-inline" style={{ minWidth: 120 }} value={role} onChange={(e) => setRole(e.target.value)}>
-          <option>READ</option><option>WRITE</option><option>ADMIN</option>
-        </select>
-      </div>
-      <div className="muted" style={{ marginBottom: 6 }}>Path scopes — leave empty for whole-repo access:</div>
-      {scopes.map((s, i) => (
-        <div className="row" key={i} style={{ marginBottom: 6 }}>
-          <input className="form-control input-inline" placeholder="e.g. frontend or docs/**" value={s.path} onChange={(e) => patch(i, { path: e.target.value })} />
-          <label className="row"><input type="checkbox" checked={s.read} onChange={(e) => patch(i, { read: e.target.checked })} /> read</label>
-          <label className="row"><input type="checkbox" checked={s.write} onChange={(e) => patch(i, { write: e.target.checked })} /> write</label>
-          {scopes.length > 1 && <button className="btn btn-danger btn-sm" onClick={() => setScopes(scopes.filter((_, idx) => idx !== i))}>×</button>}
+    <div className="stack" style={{ gap: 16 }}>
+      {!existing && (
+        <div className="field">
+          <label className="field-label" htmlFor="collab-user">Username</label>
+          <input
+            id="collab-user" className="form-control" placeholder="who are you giving access to?"
+            value={username} onChange={(e) => setUsername(e.target.value)} autoFocus
+          />
         </div>
-      ))}
-      <div className="row" style={{ marginTop: 8 }}>
-        <button className="btn btn-sm" onClick={() => setScopes([...scopes, { path: '', read: true, write: false }])}>Add scope</button>
-        <button className="btn btn-primary" disabled={!username} onClick={add}>Add collaborator</button>
+      )}
+
+      <div className="field">
+        <span className="field-label">Role</span>
+        <div className="role-options">
+          {ROLES.map((r) => (
+            <button
+              key={r.key}
+              className={cx('role-option', role === r.key && 'selected')}
+              aria-pressed={role === r.key}
+              onClick={() => setRole(r.key)}
+            >
+              <span className="role-option-name">{r.text}</span>
+              <span className="role-option-hint">{r.hint}</span>
+            </button>
+          ))}
+        </div>
       </div>
+
+      <div className="field">
+        <span className="field-label">Which files can they see?</span>
+        <p className="field-hint">
+          Select nothing to give access to the whole repository. Selecting a folder includes
+          everything inside it.
+        </p>
+        <PathPicker repo={repo} mode="rw" value={scopes} onChange={setScopes} />
+      </div>
+
       {error && <ErrorNote message={error} />}
+      <div className="row">
+        <button className="btn btn-primary" disabled={!username.trim() || saving} onClick={save}>
+          {saving ? 'Saving…' : existing ? 'Update access' : 'Add collaborator'}
+        </button>
+        <button className="btn" onClick={onCancel}>Cancel</button>
+      </div>
     </div>
   )
 }
