@@ -2,6 +2,7 @@ package dev.gitgate.git;
 
 import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
+import org.eclipse.jgit.util.FileUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -50,21 +51,21 @@ public class RepositoryService {
         return repo;
     }
 
-    /** Deletes the bare canonical repository directory for {@code name} (best-effort). */
+    /**
+     * Deletes the bare canonical repository directory for {@code name}.
+     *
+     * <p>Uses JGit's deleter rather than a plain walk-and-delete: git marks loose objects and
+     * packfiles read-only, and Windows refuses to delete read-only files — so a naive delete
+     * leaves the repository half-present on disk, and a later repo of the same name inherits
+     * the leftovers. This clears the read-only bit and retries.
+     */
     public void delete(String name) throws IOException {
-        java.nio.file.Path gitDir = baseDir.resolve(sanitize(name));
-        if (!gitDir.normalize().startsWith(baseDir) || !java.nio.file.Files.exists(gitDir)) {
-            return;
+        Path gitDir = baseDir.resolve(sanitize(name));
+        if (!gitDir.normalize().startsWith(baseDir)) {
+            throw new IOException("Invalid repository name: " + name);
         }
-        try (java.util.stream.Stream<java.nio.file.Path> walk = java.nio.file.Files.walk(gitDir)) {
-            walk.sorted(java.util.Comparator.reverseOrder()).forEach(p -> {
-                try {
-                    java.nio.file.Files.delete(p);
-                } catch (IOException ignored) {
-                    // best-effort
-                }
-            });
-        }
+        FileUtils.delete(gitDir.toFile(),
+                FileUtils.RECURSIVE | FileUtils.RETRY | FileUtils.SKIP_MISSING);
     }
 
     /** Lists the names (without the {@code .git} suffix) of existing canonical repositories. */

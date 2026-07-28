@@ -130,8 +130,17 @@ git clone http://localhost:8080/app.git                  # → public paths only
 ## Tests
 
 ```bash
-mvn test
+mvn test                            # everything (31 tests)
+mvn test -Dskip.frontend=true       # skip the dashboard build — faster loop
+mvn test -Dtest=GitOverHttpTest     # one class
+mvn test -Dtest='PushReconcilerTest#pushKeepsHiddenPathsIntact'   # one method
 ```
+
+Failures print to the console; full reports land in `target/surefire-reports/`. The suite is
+re-runnable without `mvn clean`.
+
+> **PowerShell**: quote `-D` arguments — `mvn test "-Dskip.frontend=true"`. Unquoted, PowerShell
+> splits it at the dot and Maven reports `Unknown lifecycle phase ".frontend=true"`.
 
 The suite runs the same story against the real server: `GitOverHttpTest` starts GitGate on a
 random port and drives **actual git clients** over HTTP — alice, bob and admin clone one URL and

@@ -10,6 +10,7 @@ import org.eclipse.jgit.transport.PushResult;
 import org.eclipse.jgit.transport.RemoteRefUpdate;
 import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider;
 import org.eclipse.jgit.treewalk.TreeWalk;
+import org.eclipse.jgit.util.FileUtils;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -23,7 +24,6 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Comparator;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -254,18 +254,12 @@ class GitOverHttpTest {
         return DATA.resolve("clones").resolve("c" + CLONE_COUNTER.incrementAndGet());
     }
 
+    /**
+     * Wipes the scratch storage. Uses JGit's deleter because git marks loose objects read-only and
+     * Windows won't delete read-only files — a partial wipe leaves stale clone directories and
+     * view repositories behind, which fails the next run in a thoroughly confusing way.
+     */
     private static void deleteRecursively(Path root) throws IOException {
-        if (!Files.exists(root)) {
-            return;
-        }
-        try (var paths = Files.walk(root)) {
-            paths.sorted(Comparator.reverseOrder()).forEach(path -> {
-                try {
-                    Files.deleteIfExists(path);
-                } catch (IOException ignored) {
-                    // best-effort: a leftover handle just means the next run picks a new name
-                }
-            });
-        }
+        FileUtils.delete(root.toFile(), FileUtils.RECURSIVE | FileUtils.RETRY | FileUtils.SKIP_MISSING);
     }
 }
