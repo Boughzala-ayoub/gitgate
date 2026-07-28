@@ -289,16 +289,5 @@ guarantee holds unchanged. **No anonymous writes, ever.**
 
 ---
 
-## 9. What makes this a “hire this person” project
-- Solves a **real, validated** pain (the Perforce/GitHub gap).
-- Demonstrates deep Git internals: Merkle DAG, tree/commit rewriting, pack protocol, integrity model.
-- Clear **threat model** and honest limitations = engineering maturity.
-- A demo anyone instantly understands (two users, one URL, different files).
-- A blog post with a front-page-worthy title and genuinely hard content.
-
-**The deliverable that gets you hired isn’t just the repo — it’s the working demo + the architecture diagram + the writeup explaining the hash/integrity problem and how you solved it.**
-
----
-
-## 10. Definition of MVP (what to build first, ruthlessly)
+## 9. Definition of MVP (what to build first, ruthlessly)
 Phases 0–1 only: **read-only, per-user filtered clone with a static YAML ACL.** That alone is a complete, demoable, blog-worthy project. Push (Phase 2) and the dashboard (Phase 3) are what turn it from “impressive demo” into “real product” — but do not let them block shipping the MVP.
