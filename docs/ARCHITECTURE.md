@@ -65,6 +65,18 @@ For each branch, walking history:
   resolves it through an `objects/info/alternates` link back to the canonical object store.
   Only new trees and commits are written. Views are cheap.
 
+The ancestry walk is **iterative, not recursive**. History is as deep as the repository has
+commits, so recursing once per commit overflows the JVM stack on any real repository — an
+explicit stack keeps rewriting O(1) in stack depth regardless of history length. The same
+applies to the reconstruction on the push side, where a first push carries the entire history.
+(`ViewMaterializerTest.deepHistoryDoesNotOverflowTheStack` pins this, materializing 2 000
+commits on a deliberately small thread stack.)
+
+The `alternates` link is verified on **every** open, not just at creation. Without it a view
+resolves no blobs at all and fetches fail with an opaque server error, so a view directory that
+lost the link — an interrupted cleanup, a restored backup — repairs itself rather than staying
+permanently broken.
+
 ### The property that makes it usable: determinism
 
 The rewrite is a **pure function of `(canonical commit, permission set)`**. The same view
@@ -196,8 +208,8 @@ from a fake one.
 
 **Protected against:**
 - An authenticated user **reading** paths outside their ACL — forbidden objects are never sent
-  over the wire, not merely hidden in the checkout. (Verified: a user cannot fetch a hidden blob
-  even by its exact SHA.)
+  over the wire, not merely hidden in the checkout. (A user cannot fetch a hidden blob even by
+  its exact SHA; see [§8](#8-how-the-guarantees-are-verified).)
 - An authenticated user **writing** paths outside their write-ACL.
 - Leakage of hidden files' **existence or names** — filtered trees omit entries entirely.
 
@@ -211,7 +223,38 @@ from a fake one.
 
 ---
 
-## 8. Technology choices
+## 8. How the guarantees are verified
+
+Security claims are only worth what tests them. The suite (`mvn verify`, run by CI on every push)
+is built so that the properties above fail loudly if they regress.
+
+**End to end, over the wire** — `GitOverHttpTest` starts the server on a random port and drives
+**real git clients** against it, which is the only way to prove what actually travels:
+
+| Property | How it's tested |
+|---|---|
+| Each user gets a different slice of one URL | alice, bob and admin clone `app.git`; the three checkouts are asserted file-by-file |
+| Forbidden objects are never transmitted | the hidden blob's exact SHA is looked up in alice's clone's object database — absent |
+| Private repos reject anonymous access | an unauthenticated clone must fail |
+| A push cannot alter what the pusher can't see | alice pushes a change; canonical still holds `TOPSECRET.txt` byte-identical |
+| Read-only paths reject writes | alice's push touching `README.md` comes back rejected |
+| Two collaborators can't disturb each other | bob rewrites `backend/`; alice's `frontend/` is untouched |
+| A view repairs a missing `alternates` link | the link is deleted mid-test; the next clone still succeeds |
+
+**Engine-level** — `ViewMaterializerTest` covers filtering, determinism (the same view of the same
+history yields identical object IDs, and re-materializing is a no-op), metadata preservation, the
+empty-view case, and deep history. `PushReconcilerTest` covers hidden-path preservation, write-ACL
+rejection for both read-only edits and injection into invisible directories, correctly scoped
+deletions, and branch-deletion refusal. `AclServiceTest` covers the resolution precedence in §5,
+including the same user getting different access on different repos. `GlobMatcherTest` covers the
+matching rules every decision rests on.
+
+The engine tests build real repositories with JGit rather than mocking it, so they exercise the
+actual object model.
+
+---
+
+## 9. Technology choices
 
 | Concern | Choice | Why |
 |---|---|---|
@@ -224,7 +267,7 @@ from a fake one.
 
 ---
 
-## 9. Where to look in the code
+## 10. Where to look in the code
 
 | You want to understand… | Start here |
 |---|---|
@@ -233,7 +276,9 @@ from a fake one.
 | Who-can-see-what resolution | `acl/AclService.java`, `acl/ReadView.java` |
 | Glob matching | `acl/GlobMatcher.java` |
 | Smart-HTTP wiring | `git/GitHttpController.java`, `git/RepositoryService.java` |
+| View storage + `alternates` | `git/ViewService.java` |
 | Auth + anonymous tier | `auth/BasicAuthFilter.java`, `auth/AnonymousRateLimiter.java` |
 | Web code browser (view-scoped) | `api/BrowseService.java` |
+| **What the guarantees actually mean** | `src/test/java/dev/gitgate/GitOverHttpTest.java` |
 
 See [`../PLAN.md`](../PLAN.md) for the full roadmap and design history.

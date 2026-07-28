@@ -157,11 +157,20 @@ Full detail, diagrams, and the threat model: **[docs/ARCHITECTURE.md](docs/ARCHI
 
 ---
 
-## Status
+## What's built
 
-A working, verified multi-tenant Git platform. Highlights:
+A working multi-tenant Git platform, not a proof of concept.
+
+**The engine**
 
 - **Per-user filtered clones** (reads) and **reconciled pushes with path-level write-ACL** (writes).
+- History rewriting is **deterministic** (so `fetch` stays incremental) and **iterative**, so a
+  repository with deep history doesn't exhaust the JVM stack on clone or first push.
+- Views share canonical blobs through `alternates` and repair that link if it goes missing, rather
+  than silently serving unreadable packs.
+
+**The platform**
+
 - **Multi-tenant**: repos have an owner + collaborators; access is keyed by `(user, repo)` with
   per-collaborator path scopes.
 - **Accounts & self-service**: public signup/login; create your own repos; scope collaborators.
@@ -172,12 +181,18 @@ A working, verified multi-tenant Git platform. Highlights:
 - Persistence in **H2/JPA**, **hashed-token** auth, an audit log, and a **React (Vite) dashboard**
   served by the jar.
 
-Every capability above has been verified end-to-end (e.g. a self-signed-up user scoping another
-user to `docs/` and confirming that user's clone contains only `docs/`). See the build log below
-for the per-phase verification notes, and [`PLAN.md`](PLAN.md) for the roadmap.
+**Operability**
+
+- `mvn verify` is the whole gate: 31 tests plus the dashboard build, run on every push by
+  [CI](.github/workflows/ci.yml).
+- `docker build` produces a runnable image; all persistent state lives under one `GITGATE_DATA_DIR`.
+- The seeded superadmin token is overridable, and the server warns when the demo default is in use.
+
+The access-control guarantees are covered by automated tests rather than by manual demos — see
+[Tests](#tests) above. [`PLAN.md`](PLAN.md) has the roadmap and design history.
 
 <details>
-<summary><strong>Detailed build log (phases 0–9)</strong></summary>
+<summary><strong>How it was built (phases 0–9)</strong></summary>
 
 - **Phase 0 — Git smart-HTTP server.** clone / fetch / push over HTTP with Basic auth.
 - **Phase 1 — Per-user filtered clones.** Each user receives only the paths their ACL grants;
@@ -212,6 +227,11 @@ for the per-phase verification notes, and [`PLAN.md`](PLAN.md) for the roadmap.
   materialized view, with a React file browser (branch selector, breadcrumbs, file viewer).
   Anonymous browsing allowed for public repos (rate-limited). Verified: owner / scoped-collaborator
   / anonymous each see only their paths, and a hidden file returns 404 even by direct URL.
+- **Hardening.** The phase demos above were manual; they are now automated tests. Two defects
+  surfaced in the process and were fixed: history rewriting recursed per commit (any repo with a
+  few thousand commits overflowed the stack on clone or first push), and a view repository that
+  lost its `alternates` link never regained it, serving broken packs indefinitely. Packaging,
+  Docker, CI and the admin-token override landed alongside.
 
 </details>
 
@@ -250,7 +270,7 @@ docs/     ARCHITECTURE.md
 Dockerfile, .github/workflows/ci.yml
 ```
 
-See [docs/ARCHITECTURE.md §9](docs/ARCHITECTURE.md#9-where-to-look-in-the-code) for a guided tour.
+See [docs/ARCHITECTURE.md §10](docs/ARCHITECTURE.md#10-where-to-look-in-the-code) for a guided tour.
 
 ---
 
