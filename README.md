@@ -66,9 +66,21 @@ See **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** for how.
 ### Docker
 
 ```bash
-docker build -t gitgate .
-docker run -p 8080:8080 -v gitgate-data:/data -e GITGATE_ADMIN_TOKEN=<pick-one> gitgate
+docker compose up -d --build            # http://localhost:8080
+docker compose watch                    # …and rebuild automatically when you edit source
 ```
+
+`docker compose watch` reacts to saves in `src/`, `frontend/src/` and `pom.xml`: it rebuilds the
+image and restarts the container, taking roughly **45 seconds** end to end. The build is staged so
+a Java-only change reuses the cached `npm ci` and dashboard build, and a dashboard-only change
+reuses the cached Maven dependencies.
+
+> A container serves the code that was baked into its image. Editing files on your machine changes
+> nothing until the image is rebuilt — that is what `watch` automates. For rapid dashboard work,
+> skip Docker and use the dev server (see below), which updates in milliseconds.
+
+Set `GITGATE_PORT` to publish somewhere other than 8080, and `GITGATE_ADMIN_TOKEN` before exposing
+the server anywhere. Plain `docker build`/`docker run` still work if you prefer them.
 
 ### From source
 
@@ -298,7 +310,13 @@ cd frontend
 npm install
 npm run dev      # hot-reload dev server on :5173, proxies /api to :8080
 npm run build    # rebuild into src/main/resources/static/, then repackage the jar
+
+# point the dev server at a backend running somewhere else (e.g. a container on 8100)
+VITE_API_TARGET=http://localhost:8100 npm run dev
 ```
+
+The dev server is the fast loop for dashboard work: changes appear immediately, against whichever
+backend you point it at. Docker rebuilds (~45s) are for verifying the packaged artifact.
 
 > The running jar serves the frontend **bundled at package time** — editing `frontend/src` and
 > running `npm run build` is not enough to change `:8080`; you must repackage the jar

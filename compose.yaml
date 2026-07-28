@@ -1,0 +1,37 @@
+# Run GitGate in Docker:
+#
+#   docker compose up -d --build     # start it
+#   docker compose watch             # start it AND rebuild whenever you edit source
+#
+# `watch` reacts to saves: edit Java or frontend source and Compose rebuilds the image and
+# restarts the container for you. A rebuild is tens of seconds, not instant — for tight
+# frontend iteration use `cd frontend && npm run dev` against this container instead
+# (see README, "Frontend development").
+services:
+  gitgate:
+    build: .
+    image: gitgate:latest
+    ports:
+      - "${GITGATE_PORT:-8080}:8080"
+    environment:
+      # Change this before exposing the server anywhere; it seeds the superadmin on first run.
+      GITGATE_ADMIN_TOKEN: ${GITGATE_ADMIN_TOKEN:-admin123}
+    volumes:
+      - gitgate-data:/data
+    restart: unless-stopped
+
+    develop:
+      watch:
+        # Server code, build config and seed data → rebuild the image.
+        - action: rebuild
+          path: ./src
+        - action: rebuild
+          path: ./pom.xml
+        # Dashboard source → rebuild too (it is compiled into the jar).
+        - action: rebuild
+          path: ./frontend/src
+        - action: rebuild
+          path: ./frontend/package.json
+
+volumes:
+  gitgate-data:

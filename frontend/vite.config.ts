@@ -11,8 +11,11 @@ export default defineConfig({
     emptyOutDir: true,
   },
   server: {
+    // Point the dev server at whichever backend you're running:
+    //   npm run dev                                    → localhost:8080 (a local jar)
+    //   VITE_API_TARGET=http://localhost:8100 npm run dev → a container on another port
     proxy: {
-      '/api': 'http://localhost:8080',
+      '/api': process.env.VITE_API_TARGET || 'http://localhost:8080',
     },
   },
 })
