@@ -5,6 +5,7 @@ import dev.gitgate.api.Dtos.CollaboratorDto;
 import dev.gitgate.api.Dtos.RepoDto;
 import dev.gitgate.api.Dtos.ScopeDto;
 import dev.gitgate.git.RepositoryService;
+import dev.gitgate.git.ViewService;
 import dev.gitgate.store.AppUser;
 import dev.gitgate.store.AppUserRepository;
 import dev.gitgate.store.Membership;
@@ -40,17 +41,19 @@ public class RepoService {
     private final MembershipScopeRepository scopes;
     private final PublicScopeRepository publicScopes;
     private final RepositoryService gitRepos;
+    private final ViewService views;
     private final AclService acl;
 
     public RepoService(RepoRepository repos, AppUserRepository users, MembershipRepository memberships,
                        MembershipScopeRepository scopes, PublicScopeRepository publicScopes,
-                       RepositoryService gitRepos, AclService acl) {
+                       RepositoryService gitRepos, ViewService views, AclService acl) {
         this.repos = repos;
         this.users = users;
         this.memberships = memberships;
         this.scopes = scopes;
         this.publicScopes = publicScopes;
         this.gitRepos = gitRepos;
+        this.views = views;
         this.acl = acl;
     }
 
@@ -119,9 +122,13 @@ public class RepoService {
         Repo repo = repoOr404(name);
         requireOwner(me, repo);
         memberships.findByRepo(repo).forEach(this::deleteMembership);
+        // Public scopes reference the repo with a non-optional FK: leaving them behind makes the
+        // repo row undeletable, so deleting a partially-public repo fails outright.
+        publicScopes.findByRepo(repo).forEach(publicScopes::delete);
         repos.delete(repo);
         try {
             gitRepos.delete(name);
+            views.deleteViews(name); // views are a cache, but a same-named repo must not inherit them
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }

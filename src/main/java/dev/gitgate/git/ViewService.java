@@ -4,6 +4,7 @@ import dev.gitgate.acl.AclService;
 import dev.gitgate.acl.ReadView;
 import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
+import org.eclipse.jgit.util.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -65,6 +66,22 @@ public class ViewService {
             log.debug("Serving view '{}' of '{}' to user '{}'", view.viewId(), repoName, username);
             return viewRepo;
         }
+    }
+
+    /**
+     * Removes every materialized view of {@code repoName}.
+     *
+     * <p>Called when a repository is deleted: views are a cache, but leaving them behind means a
+     * later repository of the same name starts life with another repo's rewritten objects sitting
+     * in its view store.
+     */
+    public void deleteViews(String repoName) throws IOException {
+        Path dir = viewsRoot.resolve(sanitize(repoName));
+        if (!dir.normalize().startsWith(viewsRoot)) {
+            throw new IOException("Invalid repository name: " + repoName);
+        }
+        FileUtils.delete(dir.toFile(), FileUtils.RECURSIVE | FileUtils.RETRY | FileUtils.SKIP_MISSING);
+        log.debug("Deleted materialized views for '{}'", repoName);
     }
 
     private Repository openOrCreateViewRepo(String repoName, String viewId, Repository canonical)
