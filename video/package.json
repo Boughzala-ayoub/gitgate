@@ -1,0 +1,21 @@
+{
+  "name": "gitgate-video",
+  "version": "1.0.0",
+  "private": true,
+  "description": "60-second launch clip for GitGate, built with Remotion",
+  "scripts": {
+    "studio": "remotion studio",
+    "render": "remotion render GitGateLaunch out/gitgate.mp4",
+    "still": "remotion still GitGateLaunch"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.500",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "remotion": "4.0.500"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.17",
+    "typescript": "5.9.3"
+  }
+}

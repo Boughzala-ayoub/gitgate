@@ -8,6 +8,10 @@ data/
 # machine-local tool settings
 .claude/settings.local.json
 
+# video (Remotion)
+video/node_modules/
+video/out/
+
 # frontend
 frontend/node_modules/
 # node toolchain downloaded by frontend-maven-plugin
