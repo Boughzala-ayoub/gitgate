@@ -37,13 +37,21 @@ public final class Dtos {
 
     public record MeDto(String username, boolean superadmin) {}
 
-    public record RepoDto(String name, String owner, String visibility, String myRole, List<String> publicPaths) {}
+    public record RepoDto(String name, String owner, String visibility, String myRole,
+                          List<String> publicPaths, List<String> publicExclusions) {}
 
     public record CreateRepoReq(String name, String visibility) {}
 
-    public record SetVisibilityReq(String visibility, List<String> publicPaths) {}
+    /** {@code publicExclusions} are carved out of {@code publicPaths}: public *except* these. */
+    public record SetVisibilityReq(String visibility, List<String> publicPaths,
+                                   List<String> publicExclusions) {}
 
-    public record ScopeDto(String path, boolean read, boolean write) {}
+    /** {@code excluded} inverts the rule: the path is carved out of the grant, never added to it. */
+    public record ScopeDto(String path, boolean read, boolean write, boolean excluded) {
+        public ScopeDto(String path, boolean read, boolean write) {
+            this(path, read, write, false);
+        }
+    }
 
     public record CollaboratorDto(String username, String role, List<ScopeDto> scopes) {}
 

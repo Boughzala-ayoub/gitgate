@@ -2,6 +2,11 @@ package dev.gitgate.acl;
 
 import dev.gitgate.store.AppUser;
 import dev.gitgate.store.AppUserRepository;
+import dev.gitgate.store.Membership;
+import dev.gitgate.store.MembershipRepository;
+import dev.gitgate.store.MembershipRole;
+import dev.gitgate.store.MembershipScope;
+import dev.gitgate.store.MembershipScopeRepository;
 import dev.gitgate.store.PublicScope;
 import dev.gitgate.store.PublicScopeRepository;
 import dev.gitgate.store.Repo;
@@ -40,6 +45,10 @@ class AclServiceTest {
     private RepoRepository repos;
     @Autowired
     private PublicScopeRepository publicScopes;
+    @Autowired
+    private MembershipRepository memberships;
+    @Autowired
+    private MembershipScopeRepository scopes;
 
     @Test
     void collaboratorGetsOnlyTheirScopedPaths() {
@@ -102,6 +111,64 @@ class AclServiceTest {
     }
 
     @Test
+    void aPublicRepoCanHideIndividualFilesFromCloners() {
+        AppUser admin = users.findByUsername("admin").orElseThrow();
+        Repo repo = repos.save(new Repo("openish", admin));
+        repo.setVisibility("PUBLIC");
+        repos.save(repo);
+        // Fully public, except two carve-outs.
+        publicScopes.save(new PublicScope(repo, "secrets.env", true));
+        publicScopes.save(new PublicScope(repo, "internal", true));
+
+        ReadView anon = acl.resolve(null, "openish");
+
+        assertTrue(anon.matcher().isReadable("README.md"), "everything else stays public");
+        assertTrue(anon.matcher().isReadable("src/app.js"));
+        assertFalse(anon.matcher().isReadable("secrets.env"), "excluded file must not be clonable");
+        assertFalse(anon.matcher().isReadable("internal/notes.md"), "excluding a folder hides its subtree");
+        assertFalse(anon.writeMatcher().isReadable("README.md"));
+    }
+
+    @Test
+    void aCollaboratorCanBeGrantedAFolderMinusOneFile() {
+        AppUser admin = users.findByUsername("admin").orElseThrow();
+        AppUser dave = ensureUser("dave");
+        Repo repo = repos.save(new Repo("carved", admin));
+        Membership m = memberships.save(new Membership(repo, dave, MembershipRole.WRITE));
+        scopes.save(new MembershipScope(m, "backend", true, true));
+        scopes.save(new MembershipScope(m, "backend/secrets.env", false, false, true));
+
+        ReadView view = acl.resolve("dave", "carved");
+
+        assertTrue(view.matcher().isReadable("backend/db.js"));
+        assertTrue(view.writeMatcher().isReadable("backend/db.js"));
+        assertFalse(view.matcher().isReadable("backend/secrets.env"), "carved out of the grant");
+        assertFalse(view.writeMatcher().isReadable("backend/secrets.env"),
+                "you cannot write what you cannot see");
+        assertFalse(view.matcher().isReadable("frontend/app.js"), "still default-deny elsewhere");
+    }
+
+    @Test
+    void viewsWithDifferentExclusionsAreNotShared() {
+        // viewId keys the on-disk materialized view. If exclusions didn't feed it, a user who
+        // hid a file would be served the cached view of a user who hadn't.
+        AppUser admin = users.findByUsername("admin").orElseThrow();
+        AppUser erin = ensureUser("erin");
+        AppUser frank = ensureUser("frank");
+        Repo repo = repos.save(new Repo("cachekey", admin));
+
+        Membership a = memberships.save(new Membership(repo, erin, MembershipRole.READ));
+        scopes.save(new MembershipScope(a, "src", true, false));
+
+        Membership b = memberships.save(new Membership(repo, frank, MembershipRole.READ));
+        scopes.save(new MembershipScope(b, "src", true, false));
+        scopes.save(new MembershipScope(b, "src/secret.txt", false, false, true));
+
+        assertNotEquals(acl.resolve("erin", "cachekey").viewId(), acl.resolve("frank", "cachekey").viewId(),
+                "same grant, different exclusions — must be different views");
+    }
+
+    @Test
     void repoNamesResolveWithOrWithoutTheGitSuffix() {
         assertEquals(acl.resolve("alice", "app").viewId(), acl.resolve("alice", "app.git").viewId());
         assertEquals(acl.resolve("alice", "app").viewId(), acl.resolve("alice", "/app.git/").viewId());
@@ -114,7 +181,7 @@ class AclServiceTest {
     }
 
     /** A user with no memberships anywhere — used to probe non-member access. */
-    private void ensureUser(String username) {
-        users.findByUsername(username).orElseGet(() -> users.save(new AppUser(username)));
+    private AppUser ensureUser(String username) {
+        return users.findByUsername(username).orElseGet(() -> users.save(new AppUser(username)));
     }
 }

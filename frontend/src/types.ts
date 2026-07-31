@@ -11,12 +11,15 @@ export interface Repo {
   visibility: Visibility
   myRole: string
   publicPaths: string[]
+  publicExclusions: string[]
 }
 
 export interface Scope {
   path: string
   read: boolean
   write: boolean
+  /** Carved out of the grant rather than added to it — an exclusion always wins. */
+  excluded?: boolean
 }
 
 export interface Collaborator {

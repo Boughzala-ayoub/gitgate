@@ -61,7 +61,7 @@ export const api = {
   createRepo: (name: string): Promise<Repo> => req('POST', '/repos', { name, visibility: 'PRIVATE' }),
   getRepo: (name: string): Promise<Repo> => req('GET', `/repos/${name}`),
   deleteRepo: (name: string): Promise<void> => req('DELETE', `/repos/${name}`),
-  setVisibility: (name: string, body: { visibility: Visibility; publicPaths: string[] }): Promise<Repo> =>
+  setVisibility: (name: string, body: { visibility: Visibility; publicPaths: string[]; publicExclusions: string[] }): Promise<Repo> =>
     req('PUT', `/repos/${name}/visibility`, body),
 
   collaborators: (name: string): Promise<Collaborator[]> => req('GET', `/repos/${name}/collaborators`),

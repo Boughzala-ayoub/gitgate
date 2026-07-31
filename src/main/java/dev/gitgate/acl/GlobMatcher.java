@@ -17,36 +17,61 @@ import java.util.regex.Pattern;
  * As a convenience, a glob with no wildcard also grants its entire subtree:
  * {@code "backend"} matches {@code "backend"} and any {@code "backend/..."}.
  *
- * <p>A path is readable if it matches any glob (default deny).
+ * <p>A path is readable if it matches an <em>allow</em> glob and no <em>exclusion</em> glob
+ * (default deny; an exclusion always wins). Exclusions are what make "this whole folder except
+ * that one file" expressible — without them every allowed path would have to be enumerated.
  */
 public final class GlobMatcher {
 
     private record Rule(String glob, Pattern pattern, boolean hasWildcard) {}
 
-    private final List<Rule> rules;
+    private final List<Rule> allow;
+    private final List<Rule> deny;
 
-    private GlobMatcher(List<Rule> rules) {
-        this.rules = rules;
+    private GlobMatcher(List<Rule> allow, List<Rule> deny) {
+        this.allow = allow;
+        this.deny = deny;
     }
 
     public static GlobMatcher of(Collection<String> globs) {
+        return of(globs, List.of());
+    }
+
+    /**
+     * @param globs      paths this view may see
+     * @param exclusions paths carved back out of {@code globs}, whatever they match
+     */
+    public static GlobMatcher of(Collection<String> globs, Collection<String> exclusions) {
+        return new GlobMatcher(compile(globs), compile(exclusions));
+    }
+
+    private static List<Rule> compile(Collection<String> globs) {
         List<Rule> rules = new ArrayList<>();
         for (String glob : globs) {
             boolean wild = glob.indexOf('*') >= 0 || glob.indexOf('?') >= 0;
             rules.add(new Rule(glob, Pattern.compile(toRegex(glob)), wild));
         }
-        return new GlobMatcher(rules);
+        return rules;
     }
 
-    /** @return true if {@code path} (a forward-slash repo path) is granted by any glob. */
+    /** @return true if {@code path} (a forward-slash repo path) is granted and not excluded. */
     public boolean isReadable(String path) {
+        return matches(allow, path) && !matches(deny, path);
+    }
+
+    /** True if {@code path} is carved out by an exclusion — used to explain access, not to gate it. */
+    public boolean isExcluded(String path) {
+        return matches(deny, path);
+    }
+
+    private static boolean matches(List<Rule> rules, String path) {
         for (Rule rule : rules) {
             if (rule.pattern.matcher(path).matches()) {
                 return true;
             }
             if (!rule.hasWildcard
                     && (path.equals(rule.glob) || path.startsWith(rule.glob + "/"))) {
-                return true; // plain name grants its whole subtree
+                return true; // plain name covers its whole subtree
             }
         }
         return false;

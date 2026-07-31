@@ -41,6 +41,16 @@ export const PlusIcon = (p: IconProps) => (
   <Svg {...p}><path d="M7.75 2a.75.75 0 0 1 .75.75V7h4.25a.75.75 0 0 1 0 1.5H8.5v4.25a.75.75 0 0 1-1.5 0V8.5H2.75a.75.75 0 0 1 0-1.5H7V2.75A.75.75 0 0 1 7.75 2Z" /></Svg>
 )
 
+/** An eye with a slash through it — "hidden". */
+export const EyeClosedIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M1.5 8S4 4 8 4s6.5 4 6.5 4-2.5 4-6.5 4-6.5-4-6.5-4Z"
+          fill="none" stroke="currentColor" strokeWidth="1.4" />
+    <circle cx="8" cy="8" r="1.9" fill="currentColor" />
+    <path d="M2.2 13.8 13.8 2.2" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+  </Svg>
+)
+
 export const ChevronRightIcon = (p: IconProps) => (
   <Svg {...p}><path d="M6.22 3.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.06L9.94 8 6.22 4.28a.75.75 0 0 1 0-1.06Z" /></Svg>
 )

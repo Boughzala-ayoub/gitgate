@@ -1,21 +1,33 @@
 import { useEffect, useState } from 'react'
 import { api } from './api'
-import { ChevronDownIcon, ChevronRightIcon, FileIcon, FolderIcon } from './icons'
-import { covers } from './paths'
+import { ChevronDownIcon, ChevronRightIcon, EyeClosedIcon, FileIcon, FolderIcon } from './icons'
+import { excludedBy, grantedBy } from './paths'
 import { cx, ErrorNote, Spinner } from './ui'
 import type { Scope, TreeEntry } from './types'
 
 /**
  * Grant access by clicking the repository's actual files and folders, instead of typing globs.
  *
- * Selecting a folder grants its whole subtree — that is exactly how the server's matcher treats a
- * path with no wildcard, so what you click is what gets stored. Patterns that can't be expressed
- * by clicking (`*.md`) are still addable by hand and shown alongside.
+ * Two shapes of rule, matching the server: a **grant** (this path, and its subtree if it's a
+ * folder) and an **exclusion**, which carves a path back out and always wins. That pairing is
+ * what makes "the whole backend folder except its secrets" and "public except this file"
+ * expressible at all.
  */
 export type PickerMode = 'rw' | 'read'
 
 export type Access = 'none' | 'read' | 'write'
 
+/**
+ * How a row got its access — everything the row UI needs.
+ *
+ * `openByDefault` covers the public case with no explicit paths: the repo is fully public, so
+ * every row is already visible even though no grant names it.
+ */
+type RowState =
+  | { kind: 'excluded'; via?: string }
+  | { kind: 'inherited'; via: string; write: boolean }
+  | { kind: 'open' }
+  | { kind: 'explicit'; access: Access }
 
 export default function PathPicker({
   repo, mode, value, onChange,
@@ -39,16 +51,23 @@ export default function PathPicker({
       .catch((e: Error) => setError(e.message))
   }, [repo])
 
-  /** Access recorded for this exact path, ignoring inheritance. */
-  function exact(path: string): Access {
-    const hit = value.find((s) => s.path === path)
-    if (!hit) return 'none'
-    return hit.write ? 'write' : 'read'
-  }
+  const grants = value.filter((s) => !s.excluded)
+  // Public with nothing selected means the whole repo is public; a collaborator with no grants
+  // has no access until one is added.
+  const openByDefault = mode === 'read' && grants.length === 0
 
-  /** Another selection (a parent folder, or a pattern like `*.md`) already covers this path. */
-  function inheritedFrom(path: string): Scope | undefined {
-    return value.find((s) => path !== s.path && covers(s.path, path))
+  function stateOf(path: string): RowState {
+    const exclusion = excludedBy(value, path)
+    if (exclusion) {
+      return { kind: 'excluded', via: exclusion.path === path ? undefined : exclusion.path }
+    }
+    const exact = value.find((s) => s.path === path && !s.excluded)
+    if (exact) return { kind: 'explicit', access: exact.write ? 'write' : 'read' }
+
+    const inherited = grantedBy(grants, path)
+    if (inherited) return { kind: 'inherited', via: inherited.path, write: !!inherited.write }
+
+    return openByDefault ? { kind: 'open' } : { kind: 'explicit', access: 'none' }
   }
 
   function setAccess(path: string, access: Access) {
@@ -58,6 +77,14 @@ export default function PathPicker({
       return
     }
     onChange([...rest, { path, read: true, write: access === 'write' }])
+  }
+
+  function exclude(path: string) {
+    onChange([...value.filter((s) => s.path !== path), { path, read: false, write: false, excluded: true }])
+  }
+
+  function clearRule(path: string) {
+    onChange(value.filter((s) => s.path !== path))
   }
 
   if (error) return <ErrorNote message={error} />
@@ -72,28 +99,29 @@ export default function PathPicker({
       ) : (
         <div className="picker-tree" role="tree" aria-label="Repository files">
           <Level
-            repo={repo} refName={ref} path="" depth={0}
-            mode={mode} exact={exact} inheritedFrom={inheritedFrom} setAccess={setAccess}
+            repo={repo} refName={ref} path="" depth={0} mode={mode}
+            stateOf={stateOf} setAccess={setAccess} exclude={exclude} clearRule={clearRule}
           />
         </div>
       )}
-      <SelectionSummary mode={mode} value={value} onChange={onChange} />
+      <SelectionSummary mode={mode} value={value} onChange={onChange} openByDefault={openByDefault} />
     </div>
   )
 }
 
 /** One directory's children; folders expand in place and load lazily. */
 function Level({
-  repo, refName, path, depth, mode, exact, inheritedFrom, setAccess,
+  repo, refName, path, depth, mode, stateOf, setAccess, exclude, clearRule,
 }: {
   repo: string
   refName: string
   path: string
   depth: number
   mode: PickerMode
-  exact: (path: string) => Access
-  inheritedFrom: (path: string) => Scope | undefined
+  stateOf: (path: string) => RowState
   setAccess: (path: string, access: Access) => void
+  exclude: (path: string) => void
+  clearRule: (path: string) => void
 }) {
   const [entries, setEntries] = useState<TreeEntry[] | null>(null)
   const [open, setOpen] = useState<Record<string, boolean>>({})
@@ -109,19 +137,19 @@ function Level({
     return <div className="picker-row muted" style={{ paddingLeft: 28 + depth * 16 }}>empty</div>
   }
 
-  // Folders first, then files — the order people expect to scan.
   const sorted = [...entries].sort((a, b) =>
     a.type === b.type ? a.name.localeCompare(b.name) : a.type === 'tree' ? -1 : 1)
 
   return (
     <>
       {sorted.map((entry) => {
-        const inherited = inheritedFrom(entry.path)
-        const access = exact(entry.path)
+        const state = stateOf(entry.path)
         const isOpen = open[entry.path]
+        const granted = state.kind === 'inherited' || state.kind === 'open'
+          || (state.kind === 'explicit' && state.access !== 'none')
         return (
           <div key={entry.path}>
-            <div className={cx('picker-row', (access !== 'none' || inherited) && 'is-granted')}>
+            <div className={cx('picker-row', granted && 'is-granted', state.kind === 'excluded' && 'is-excluded')}>
               <div className="picker-name" style={{ paddingLeft: depth * 16 }}>
                 {entry.type === 'tree' ? (
                   <button
@@ -136,27 +164,25 @@ function Level({
                 {entry.type === 'tree'
                   ? <FolderIcon className="ic-folder" size={14} />
                   : <FileIcon className="ic-file" size={14} />}
-                <span className="picker-label" title={entry.path}>{entry.name}</span>
+                <span className={cx('picker-label', state.kind === 'excluded' && 'struck')} title={entry.path}>
+                  {entry.name}
+                </span>
                 {entry.type === 'tree' && <span className="picker-hint">/</span>}
               </div>
 
-              {inherited ? (
-                <span className="picker-inherited" title={`granted by ${inherited.path}`}>
-                  via <code>{inherited.path}</code>
-                </span>
-              ) : (
-                <AccessControl
-                  mode={mode}
-                  access={access}
-                  onSet={(a) => setAccess(entry.path, a)}
-                  label={entry.path}
-                />
-              )}
+              <RowControl
+                mode={mode}
+                state={state}
+                path={entry.path}
+                onSet={(a) => setAccess(entry.path, a)}
+                onExclude={() => exclude(entry.path)}
+                onClear={() => clearRule(entry.path)}
+              />
             </div>
             {entry.type === 'tree' && isOpen && (
               <Level
-                repo={repo} refName={refName} path={entry.path} depth={depth + 1}
-                mode={mode} exact={exact} inheritedFrom={inheritedFrom} setAccess={setAccess}
+                repo={repo} refName={refName} path={entry.path} depth={depth + 1} mode={mode}
+                stateOf={stateOf} setAccess={setAccess} exclude={exclude} clearRule={clearRule}
               />
             )}
           </div>
@@ -166,26 +192,57 @@ function Level({
   )
 }
 
-/** None / Read / Write for collaborators; a single toggle for public paths. */
-function AccessControl({
-  mode, access, onSet, label,
+function RowControl({
+  mode, state, path, onSet, onExclude, onClear,
 }: {
   mode: PickerMode
-  access: Access
+  state: RowState
+  path: string
   onSet: (a: Access) => void
-  label: string
+  onExclude: () => void
+  onClear: () => void
 }) {
-  if (mode === 'read') {
+  if (state.kind === 'excluded') {
     return (
-      <button
-        className={cx('picker-toggle', access !== 'none' && 'on')}
-        aria-pressed={access !== 'none'}
-        onClick={() => onSet(access === 'none' ? 'read' : 'none')}
-      >
-        {access === 'none' ? 'Private' : 'Public'}
-      </button>
+      <span className="picker-status">
+        <span className="pill pill-hidden"><EyeClosedIcon size={12} /> Hidden</span>
+        {state.via
+          ? <span className="picker-inherited">via <code>{state.via}</code></span>
+          : <button className="btn-link" onClick={onClear}>undo</button>}
+      </span>
     )
   }
+
+  // Covered by a parent grant (or public-by-default): the useful action here is to carve it out.
+  if (state.kind === 'inherited' || state.kind === 'open') {
+    return (
+      <span className="picker-status">
+        {state.kind === 'inherited'
+          ? <span className="picker-inherited">via <code>{state.via}</code></span>
+          : <span className="picker-inherited">public</span>}
+        <button className="btn btn-sm" onClick={onExclude} title={`Hide ${path}`}>
+          <EyeClosedIcon size={12} /> Exclude
+        </button>
+      </span>
+    )
+  }
+
+  if (mode === 'read') {
+    const on = state.access !== 'none'
+    return (
+      <span className="picker-status">
+        <button
+          className={cx('picker-toggle', on && 'on')}
+          aria-pressed={on}
+          onClick={() => onSet(on ? 'none' : 'read')}
+        >
+          {on ? 'Public' : 'Private'}
+        </button>
+        {on && <button className="btn btn-sm" onClick={onExclude} title={`Hide ${path}`}>Exclude</button>}
+      </span>
+    )
+  }
+
   // Write always includes read: the server merges a push using the paths the pusher can see, so
   // write-without-read would silently drop their changes. One choice, three levels.
   const options: Array<{ key: Access; text: string; title: string }> = [
@@ -194,12 +251,12 @@ function AccessControl({
     { key: 'write', text: 'Read + write', title: 'Can clone, browse and push changes' },
   ]
   return (
-    <div className="segmented" role="group" aria-label={`Access to ${label}`}>
+    <div className="segmented" role="group" aria-label={`Access to ${path}`}>
       {options.map((o) => (
         <button
           key={o.key}
-          className={cx('segmented-item', access === o.key && 'selected')}
-          aria-pressed={access === o.key}
+          className={cx('segmented-item', state.access === o.key && 'selected')}
+          aria-pressed={state.access === o.key}
           title={o.title}
           onClick={() => onSet(o.key)}
         >
@@ -210,53 +267,80 @@ function AccessControl({
   )
 }
 
-/** Everything currently granted, including hand-written globs the tree can't represent. */
+/** Everything currently granted or hidden, including patterns the tree can't represent. */
 function SelectionSummary({
-  mode, value, onChange,
+  mode, value, onChange, openByDefault,
 }: {
   mode: PickerMode
   value: Scope[]
   onChange: (scopes: Scope[]) => void
+  openByDefault: boolean
 }) {
   const [pattern, setPattern] = useState('')
+  const [asExclusion, setAsExclusion] = useState(false)
 
   function addPattern() {
     const path = pattern.trim()
     if (!path || value.some((s) => s.path === path)) { setPattern(''); return }
-    onChange([...value, { path, read: true, write: false }])
+    onChange([...value, { path, read: !asExclusion, write: false, excluded: asExclusion }])
     setPattern('')
   }
+
+  const grants = value.filter((s) => !s.excluded)
+  const exclusions = value.filter((s) => s.excluded)
 
   return (
     <div className="picker-summary">
       <div className="picker-summary-head">
-        {value.length === 0
-          ? <span className="muted">{mode === 'read' ? 'Nothing public yet — the repository stays fully private.' : 'No paths selected — this grants access to the whole repository.'}</span>
-          : <span className="muted">{value.length} path{value.length > 1 ? 's' : ''} selected</span>}
+        {grants.length === 0 ? (
+          <span className="muted">
+            {mode === 'read'
+              ? (openByDefault ? 'The entire repository is public.' : 'Nothing public yet.')
+              : 'No paths selected — this grants access to the whole repository.'}
+          </span>
+        ) : (
+          <span className="muted">{grants.length} path{grants.length > 1 ? 's' : ''} granted</span>
+        )}
+        {exclusions.length > 0 && (
+          <span className="muted"> · {exclusions.length} hidden</span>
+        )}
       </div>
+
       {value.length > 0 && (
         <div className="chips">
           {[...value].sort((a, b) => a.path.localeCompare(b.path)).map((s) => (
-            <span className="chip" key={s.path}>
+            <span className={cx('chip', s.excluded && 'chip-excluded')} key={s.path}>
+              {s.excluded && <EyeClosedIcon size={11} />}
               <code>{s.path}</code>
-              {mode === 'rw' && <span className={cx('chip-access', s.write && 'write')}>{s.write ? 'read + write' : 'read'}</span>}
+              {s.excluded
+                ? <span className="chip-access hidden">hidden</span>
+                : mode === 'rw' && (
+                  <span className={cx('chip-access', s.write && 'write')}>
+                    {s.write ? 'read + write' : 'read'}
+                  </span>
+                )}
               <button
                 className="chip-x"
-                aria-label={`Remove ${s.path}`}
+                aria-label={`Remove rule for ${s.path}`}
                 onClick={() => onChange(value.filter((x) => x.path !== s.path))}
               >×</button>
             </span>
           ))}
         </div>
       )}
+
       <div className="picker-pattern">
         <input
           className="form-control"
-          placeholder="Add a pattern, e.g. *.md or docs/**"
+          placeholder={asExclusion ? 'Hide a pattern, e.g. **/*.env' : 'Add a pattern, e.g. *.md or docs/**'}
           value={pattern}
           onChange={(e) => setPattern(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addPattern() } }}
         />
+        <label className="picker-pattern-mode">
+          <input type="checkbox" checked={asExclusion} onChange={(e) => setAsExclusion(e.target.checked)} />
+          hide
+        </label>
         <button className="btn btn-sm" onClick={addPattern} disabled={!pattern.trim()}>Add</button>
       </div>
     </div>

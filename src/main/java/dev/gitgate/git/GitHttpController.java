@@ -73,7 +73,7 @@ public class GitHttpController {
     }
 
     /** Step 1: advertise refs for either upload-pack (fetch) or receive-pack (push). */
-    @GetMapping("/{repo}/info/refs")
+    @GetMapping({"/{repo}/info/refs", "/a/{repo}/info/refs"})
     public void infoRefs(@PathVariable String repo,
                          @RequestParam("service") String service,
                          HttpServletRequest request,
@@ -110,7 +110,7 @@ public class GitHttpController {
     }
 
     /** Step 2 (fetch): negotiate wants/haves and stream the packfile back. */
-    @PostMapping("/{repo}/git-upload-pack")
+    @PostMapping({"/{repo}/git-upload-pack", "/a/{repo}/git-upload-pack"})
     public void uploadPack(@PathVariable String repo,
                           HttpServletRequest request,
                           HttpServletResponse response) throws IOException {
@@ -129,7 +129,7 @@ public class GitHttpController {
     }
 
     /** Step 2 (push): receive the client's packfile and update refs. */
-    @PostMapping("/{repo}/git-receive-pack")
+    @PostMapping({"/{repo}/git-receive-pack", "/a/{repo}/git-receive-pack"})
     public void receivePack(@PathVariable String repo,
                            HttpServletRequest request,
                            HttpServletResponse response) throws IOException {

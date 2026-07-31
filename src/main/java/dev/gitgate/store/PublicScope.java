@@ -30,12 +30,29 @@ public class PublicScope {
     @Column(nullable = false)
     private String pathGlob;
 
+    /**
+     * When true this glob is <em>carved out</em> of the public view instead of added to it:
+     * the repo is public "except these files". The column default keeps existing databases
+     * upgradable in place.
+     */
+    @Column(nullable = false, columnDefinition = "boolean default false")
+    private boolean excluded;
+
     protected PublicScope() {
     }
 
     public PublicScope(Repo repo, String pathGlob) {
+        this(repo, pathGlob, false);
+    }
+
+    public PublicScope(Repo repo, String pathGlob, boolean excluded) {
         this.repo = repo;
         this.pathGlob = pathGlob;
+        this.excluded = excluded;
+    }
+
+    public boolean isExcluded() {
+        return excluded;
     }
 
     public Long getId() {

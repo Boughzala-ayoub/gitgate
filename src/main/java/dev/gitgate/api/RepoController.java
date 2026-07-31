@@ -69,7 +69,7 @@ public class RepoController {
     @PutMapping("/repos/{name}/visibility")
     public RepoDto setVisibility(@RequestAttribute(BasicAuthFilter.USER_ATTRIBUTE) String me,
                                  @PathVariable String name, @RequestBody SetVisibilityReq req) {
-        return repoService.setVisibility(me, name, req.visibility(), req.publicPaths());
+        return repoService.setVisibility(me, name, req.visibility(), req.publicPaths(), req.publicExclusions());
     }
 
     @GetMapping("/repos/{name}/collaborators")

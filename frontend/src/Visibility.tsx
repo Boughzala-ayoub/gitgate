@@ -7,7 +7,10 @@ import type { Repo, Scope, Visibility as Vis } from './types'
 
 export default function Visibility({ repo, canManage, onChange }: { repo: Repo; canManage: boolean; onChange: () => void }) {
   const [visibility, setVisibility] = useState<Vis>(repo.visibility)
-  const [scopes, setScopes] = useState<Scope[]>(repo.publicPaths.map((p) => ({ path: p, read: true, write: false })))
+  const [scopes, setScopes] = useState<Scope[]>([
+    ...repo.publicPaths.map((p) => ({ path: p, read: true, write: false })),
+    ...(repo.publicExclusions ?? []).map((p) => ({ path: p, read: false, write: false, excluded: true })),
+  ])
   const [error, setError] = useState('')
   const [saved, setSaved] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -24,6 +27,16 @@ export default function Visibility({ repo, canManage, onChange }: { repo: Repo; 
                 {repo.publicPaths.length > 0 && (
                   <div className="chips">{repo.publicPaths.map((p) => <span className="chip" key={p}><code>{p}</code></span>)}</div>
                 )}
+                {(repo.publicExclusions ?? []).length > 0 && (
+                  <>
+                    <span className="muted">except, which never leave the server:</span>
+                    <div className="chips">
+                      {repo.publicExclusions.map((p) => (
+                        <span className="chip chip-excluded" key={p}><code>{p}</code></span>
+                      ))}
+                    </div>
+                  </>
+                )}
               </div>
             )
             : <span className="muted"><LockIcon size={14} /> Private</span>}
@@ -34,9 +47,11 @@ export default function Visibility({ repo, canManage, onChange }: { repo: Repo; 
 
   async function save() {
     setError(''); setSaved(false); setSaving(true)
-    const publicPaths = visibility === 'PUBLIC' ? scopes.map((s) => s.path) : []
+    const live = visibility === 'PUBLIC' ? scopes : []
+    const publicPaths = live.filter((s) => !s.excluded).map((s) => s.path)
+    const publicExclusions = live.filter((s) => s.excluded).map((s) => s.path)
     try {
-      await api.setVisibility(repo.name, { visibility, publicPaths })
+      await api.setVisibility(repo.name, { visibility, publicPaths, publicExclusions })
       setSaved(true)
       onChange()
     } catch (e) {
@@ -72,7 +87,9 @@ export default function Visibility({ repo, canManage, onChange }: { repo: Repo; 
           <div className="field">
             <span className="field-label">What should the public see?</span>
             <p className="field-hint">
-              Mark nothing to publish the entire repository. Anonymous access is always read-only.
+              By default the whole repository is public — use <b>Exclude</b> to keep individual
+              files or folders out of anonymous clones. Or mark specific paths public to expose
+              only those. Anonymous access is always read-only, and an exclusion always wins.
             </p>
             <PathPicker repo={repo.name} mode="read" value={scopes} onChange={setScopes} />
           </div>

@@ -33,14 +33,33 @@ public class MembershipScope {
 
     private boolean canWrite;
 
+    /**
+     * When true this glob is <em>carved out</em> of the membership rather than granted by it —
+     * "write access to backend/, except backend/secrets.env". An exclusion always beats a grant,
+     * so it cannot be defeated by adding a broader rule. The column default keeps existing
+     * databases upgradable in place.
+     */
+    @Column(nullable = false, columnDefinition = "boolean default false")
+    private boolean excluded;
+
     protected MembershipScope() {
     }
 
     public MembershipScope(Membership membership, String pathGlob, boolean canRead, boolean canWrite) {
+        this(membership, pathGlob, canRead, canWrite, false);
+    }
+
+    public MembershipScope(Membership membership, String pathGlob, boolean canRead, boolean canWrite,
+                           boolean excluded) {
         this.membership = membership;
         this.pathGlob = pathGlob;
         this.canRead = canRead;
         this.canWrite = canWrite;
+        this.excluded = excluded;
+    }
+
+    public boolean isExcluded() {
+        return excluded;
     }
 
     public Long getId() {

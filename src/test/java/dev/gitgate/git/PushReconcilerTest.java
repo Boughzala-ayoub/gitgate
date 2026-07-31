@@ -34,7 +34,12 @@ class PushReconcilerTest {
     }
 
     private static ReadView access(List<String> read, List<String> write) {
-        return new ReadView(read, "test", GlobMatcher.of(read), GlobMatcher.of(write));
+        return access(read, write, List.of());
+    }
+
+    private static ReadView access(List<String> read, List<String> write, List<String> exclusions) {
+        return new ReadView(read, exclusions, "test",
+                GlobMatcher.of(read, exclusions), GlobMatcher.of(write, exclusions));
     }
 
     @Test

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { api } from './api'
-import { PlusIcon, XIcon } from './icons'
+import { EyeClosedIcon, PlusIcon, XIcon } from './icons'
 import { cx, ErrorNote, Spinner, useAsync } from './ui'
 import PathPicker from './PathPicker'
 import type { Collaborator, Scope } from './types'
@@ -67,9 +67,12 @@ export default function Collaborators({ name }: { name: string }) {
                     {c.scopes.length === 0
                       ? <span className="muted">Access to the entire repository</span>
                       : c.scopes.map((s) => (
-                        <span className="chip" key={s.path}>
+                        <span className={cx('chip', s.excluded && 'chip-excluded')} key={s.path}>
+                          {s.excluded && <EyeClosedIcon size={11} />}
                           <code>{s.path}</code>
-                          <span className={cx('chip-access', s.write && 'write')}>{s.write ? 'read + write' : 'read'}</span>
+                          {s.excluded
+                            ? <span className="chip-access hidden">hidden</span>
+                            : <span className={cx('chip-access', s.write && 'write')}>{s.write ? 'read + write' : 'read'}</span>}
                         </span>
                       ))}
                   </div>
@@ -165,7 +168,9 @@ function AccessEditor({
         <span className="field-label">Which files can they see?</span>
         <p className="field-hint">
           Select nothing to give access to the whole repository. Selecting a folder includes
-          everything inside it, and <b>Read + write</b> grants both.
+          everything inside it, and <b>Read + write</b> grants both. Drill into a granted folder
+          and use <b>Exclude</b> to keep individual files out — an exclusion always wins, so it
+          can't be undone by a broader rule.
         </p>
         <PathPicker repo={repo} mode="rw" value={scopes} onChange={setScopes} />
       </div>

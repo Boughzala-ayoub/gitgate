@@ -149,8 +149,8 @@ of the memo map the materializer produced for the read side; the two halves are 
 
 ## 5. Access resolution
 
-`acl.AclService.resolve(user, repo)` returns a `ReadView` (read globs + write globs, compiled
-into `GlobMatcher`s). Precedence:
+`acl.AclService.resolve(user, repo)` returns a `ReadView` (read globs + write globs + exclusions,
+compiled into `GlobMatcher`s). Precedence:
 
 1. **Anonymous** → read-only view of the repo's *public path globs* if it's public; otherwise
    nothing.
@@ -162,6 +162,27 @@ into `GlobMatcher`s). Precedence:
 The git engine never sees roles or memberships — it just asks for a `ReadView` and materializes
 against its matchers. That separation is why the same novel engine powers private repos,
 path-scoped collaborators, and partially-public repos without special cases.
+
+### Exclusions
+
+Grants alone can't express "everything except this". A `ReadView` therefore carries **exclusions**
+alongside its globs, and `GlobMatcher.isReadable` is `matches(allow) && !matches(deny)` — an
+exclusion always wins, regardless of how specific a competing grant is, so an operator cannot
+accidentally re-grant a path they carved out. Exclusions apply to the write matcher too: you
+cannot push a path you aren't allowed to see.
+
+This is what makes the two headline cases possible — a **public repo with files that never leave
+the server**, and a collaborator with **write access to a folder but no sight of one file in it**.
+
+Two consequences worth stating:
+
+- **Exclusions feed `viewId`.** Views are cached on disk under that id and shared by everyone who
+  resolves to it, so if only the grants were hashed, a user who hid a file would be served the
+  cached view of a user who hadn't.
+- **The `/a/` clone path.** Git sends credentials only after a `401`, and a public repo never
+  issues one — so a member cloning a public repo would silently get the anonymous view. The auth
+  filter treats `/a/<repo>.git` as always-authenticated, giving members a URL that resolves to
+  *their* view. `auth.BasicAuthFilter.isAuthenticatedPath`.
 
 ---
 

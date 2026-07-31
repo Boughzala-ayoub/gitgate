@@ -50,7 +50,7 @@ class RepoLifecycleTest {
     @Test
     void deletingAPartiallyPublicRepoDoesNotStrandItsPublicScopes() {
         repoService.create("admin", "brochure", "PRIVATE");
-        repoService.setVisibility("admin", "brochure", "PUBLIC", List.of("docs/**", "*.md"));
+        repoService.setVisibility("admin", "brochure", "PUBLIC", List.of("docs/**", "*.md"), List.of("docs/private.md"));
         assertFalse(publicScopes.findByRepo(repos.findByName("brochure").orElseThrow()).isEmpty(),
                 "fixture should have public scopes to strand");
 

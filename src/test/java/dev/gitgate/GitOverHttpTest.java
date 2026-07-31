@@ -1,5 +1,7 @@
 package dev.gitgate;
 
+import dev.gitgate.api.Dtos;
+import dev.gitgate.api.RepoService;
 import dev.gitgate.git.RepositoryService;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.errors.TransportException;
@@ -24,6 +26,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -61,6 +64,8 @@ class GitOverHttpTest {
 
     @Autowired
     private RepositoryService repositories;
+    @Autowired
+    private RepoService repoService;
 
     /** One clean slate per run — before the server has opened anything under it. */
     @BeforeAll
@@ -78,13 +83,19 @@ class GitOverHttpTest {
         try (Repository canonical = repositories.open("app")) {
             if (initialCommit == null) {
                 initialCommit = TestGit.commit(canonical, "initial", TestGit.demoFiles());
-                return;
+            } else {
+                RefUpdate rewind = canonical.updateRef(TestGit.BRANCH);
+                rewind.setNewObjectId(initialCommit);
+                rewind.setForceUpdate(true);
+                rewind.update();
             }
-            RefUpdate rewind = canonical.updateRef(TestGit.BRANCH);
-            rewind.setNewObjectId(initialCommit);
-            rewind.setForceUpdate(true);
-            rewind.update();
         }
+        // Tests that re-scope a collaborator would otherwise leak into whatever runs next, so
+        // put alice and bob back to their acl.yml scopes every time.
+        repoService.addCollaborator("admin", "app", "alice", "WRITE", List.of(
+                new Dtos.ScopeDto("frontend", true, true), new Dtos.ScopeDto("*.md", true, false)));
+        repoService.addCollaborator("admin", "app", "bob", "WRITE", List.of(
+                new Dtos.ScopeDto("backend", true, true), new Dtos.ScopeDto("*.md", true, false)));
     }
 
     @Test
@@ -172,6 +183,90 @@ class GitOverHttpTest {
             assertEquals("connect('mysql');\n", TestGit.content(canonical, tip, "backend/db.js"));
             assertEquals("console.log('ui');\n", TestGit.content(canonical, tip, "frontend/app.js"));
             assertEquals("launch codes\n", TestGit.content(canonical, tip, "TOPSECRET.txt"));
+        }
+    }
+
+    /**
+     * The exclusion case, end to end: alice is granted the whole repository but one file is
+     * carved out. A clone must not contain it — and must not contain the object either, so it
+     * can't be recovered by SHA.
+     */
+    @Test
+    void anExcludedFileNeverReachesTheCollaboratorWhoIsOtherwiseGrantedEverything() throws Exception {
+        ObjectId secret;
+        try (Repository canonical = repositories.open("app")) {
+            secret = blobId(canonical, "TOPSECRET.txt");
+        }
+        grantWholeRepoExcept("alice", "TOPSECRET.txt");
+
+        try (Git clone = cloneAs("alice", "alice123")) {
+            Repository db = clone.getRepository();
+            Set<String> got = TestGit.paths(db, db.resolve("HEAD"));
+
+            assertEquals(Set.of("frontend/app.js", "backend/db.js", "README.md"), got,
+                    "everything except the excluded file");
+            assertFalse(db.getObjectDatabase().has(secret),
+                    "the excluded blob must not be transmitted at all");
+        }
+    }
+
+    @Test
+    void anExcludedPathCannotBePushedEither() throws Exception {
+        grantWholeRepoExcept("alice", "TOPSECRET.txt");
+
+        try (Git clone = cloneAs("alice", "alice123")) {
+            // She can't see it, so she can only try to create it afresh.
+            writeFile(clone, "TOPSECRET.txt", "rewritten by alice\n");
+            commitAll(clone, "alice: overwrite the file she cannot see");
+            assertEquals(RemoteRefUpdate.Status.REJECTED_OTHER_REASON, pushAs(clone, "alice", "alice123"));
+        }
+
+        try (Repository canonical = repositories.open("app")) {
+            assertEquals("launch codes\n", TestGit.content(canonical, TestGit.head(canonical), "TOPSECRET.txt"));
+        }
+    }
+
+    /** Replaces a collaborator's scopes with "everything, minus one path". */
+    private void grantWholeRepoExcept(String username, String excludedPath) {
+        repoService.addCollaborator("admin", "app", username, "WRITE", List.of(
+                new Dtos.ScopeDto("**", true, true, false),
+                new Dtos.ScopeDto(excludedPath, false, false, true)));
+    }
+
+    /**
+     * On a public repo git is never challenged, so it never sends credentials and a member would
+     * silently receive the smaller anonymous view. The /a/ path always challenges.
+     */
+    @Test
+    void membersOfAPublicRepoGetTheirOwnViewFromTheAuthenticatedPath() throws Exception {
+        repoService.setVisibility("admin", "app", "PUBLIC", List.of(), List.of("TOPSECRET.txt"));
+        try {
+            // Anonymous: the public view, minus the excluded file.
+            try (Git clone = Git.cloneRepository().setURI(cloneUrl())
+                    .setDirectory(freshCloneDir().toFile()).call()) {
+                Repository db = clone.getRepository();
+                assertEquals(Set.of("frontend/app.js", "backend/db.js", "README.md"),
+                        TestGit.paths(db, db.resolve("HEAD")));
+            }
+
+            // admin over /a/: challenged, so credentials are sent, so the full view arrives.
+            try (Git clone = Git.cloneRepository()
+                    .setURI("http://localhost:" + port + "/a/app.git")
+                    .setDirectory(freshCloneDir().toFile())
+                    .setCredentialsProvider(new UsernamePasswordCredentialsProvider("admin", "admin123"))
+                    .call()) {
+                Repository db = clone.getRepository();
+                assertEquals(Set.of("frontend/app.js", "backend/db.js", "README.md", "TOPSECRET.txt"),
+                        TestGit.paths(db, db.resolve("HEAD")), "the superadmin sees everything");
+            }
+
+            // …and that path refuses anonymous access even though the repo is public.
+            Path target = freshCloneDir();
+            assertThrows(TransportException.class, () -> Git.cloneRepository()
+                    .setURI("http://localhost:" + port + "/a/app.git")
+                    .setDirectory(target.toFile()).call());
+        } finally {
+            repoService.setVisibility("admin", "app", "PRIVATE", List.of(), List.of());
         }
     }
 

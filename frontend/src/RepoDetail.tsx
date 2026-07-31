@@ -57,14 +57,23 @@ export default function RepoDetail({ name, me, onBack }: { name: string; me: Me;
 }
 
 function CloneBar({ repo, me }: { repo: Repo; me: Me }) {
+  // Use the address this dashboard is actually served from, not a hardcoded one.
+  const host = window.location.host
   return (
     <div className="Box">
       <div className="Box-body stack" style={{ gap: 8 }}>
         <div className="row"><span className="muted" style={{ minWidth: 90 }}>Clone (you)</span>
-          <code className="codeline grow">git clone http://{me.username}@localhost:8080/{repo.name}.git</code></div>
+          <code className="codeline grow">git clone http://{me.username}@{host}/a/{repo.name}.git</code></div>
         {repo.visibility === 'PUBLIC' && (
-          <div className="row"><span className="muted" style={{ minWidth: 90 }}>Anonymous</span>
-            <code className="codeline grow">git clone http://localhost:8080/{repo.name}.git</code></div>
+          <>
+            <div className="row"><span className="muted" style={{ minWidth: 90 }}>Anonymous</span>
+              <code className="codeline grow">git clone http://{host}/{repo.name}.git</code></div>
+            <p className="field-hint" style={{ margin: 0 }}>
+              The <code>/a/</code> path asks for your credentials, so you get <em>your</em> view of
+              this repository. Without it git is never challenged on a public repo and you would
+              silently receive the public view instead.
+            </p>
+          </>
         )}
       </div>
     </div>

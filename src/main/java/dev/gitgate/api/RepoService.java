@@ -141,7 +141,7 @@ public class RepoService {
         return memberships.findByRepo(repo).stream().map(m ->
                 new CollaboratorDto(m.getUser().getUsername(), m.getRole().name(),
                         scopes.findByMembership(m).stream()
-                                .map(s -> new ScopeDto(s.getPathGlob(), s.isCanRead(), s.isCanWrite()))
+                                .map(s -> new ScopeDto(s.getPathGlob(), s.isCanRead(), s.isCanWrite(), s.isExcluded()))
                                 .toList())).toList();
     }
 
@@ -171,7 +171,7 @@ public class RepoService {
                 if (s.path() == null || s.path().isBlank()) {
                     continue;
                 }
-                scopes.save(new MembershipScope(membership, s.path(), s.read(), s.write()));
+                scopes.save(new MembershipScope(membership, s.path(), s.read(), s.write(), s.excluded()));
                 saved.add(s);
             }
         }
@@ -179,7 +179,8 @@ public class RepoService {
     }
 
     @Transactional
-    public RepoDto setVisibility(String me, String name, String visibility, List<String> publicPaths) {
+    public RepoDto setVisibility(String me, String name, String visibility, List<String> publicPaths,
+                                 List<String> publicExclusions) {
         Repo repo = repoOr404(name);
         requireRepoAdmin(me, repo);
         String v = visibility == null ? "" : visibility.toUpperCase();
@@ -190,9 +191,9 @@ public class RepoService {
         repos.save(repo);
 
         publicScopes.findByRepo(repo).forEach(publicScopes::delete);
-        if (v.equals("PUBLIC") && publicPaths != null) {
-            publicPaths.stream().filter(p -> p != null && !p.isBlank())
-                    .forEach(p -> publicScopes.save(new PublicScope(repo, p.trim())));
+        if (v.equals("PUBLIC")) {
+            savePublicScopes(repo, publicPaths, false);
+            savePublicScopes(repo, publicExclusions, true);
         }
         return toRepoDto(repo, roleOf(repo, user(me)));
     }
@@ -270,11 +271,23 @@ public class RepoService {
         }
     }
 
+    private void savePublicScopes(Repo repo, List<String> globs, boolean excluded) {
+        if (globs == null) {
+            return;
+        }
+        globs.stream().filter(p -> p != null && !p.isBlank())
+                .forEach(p -> publicScopes.save(new PublicScope(repo, p.trim(), excluded)));
+    }
+
     private RepoDto toRepoDto(Repo r, String myRole) {
         String owner = r.getOwner() == null ? null : r.getOwner().getUsername();
-        List<String> publicPaths = "PUBLIC".equals(r.getVisibility())
-                ? publicScopes.findByRepo(r).stream().map(PublicScope::getPathGlob).sorted().toList()
+        List<PublicScope> scopes = "PUBLIC".equals(r.getVisibility())
+                ? publicScopes.findByRepo(r)
                 : List.of();
-        return new RepoDto(r.getName(), owner, r.getVisibility(), myRole, publicPaths);
+        List<String> publicPaths = scopes.stream().filter(s -> !s.isExcluded())
+                .map(PublicScope::getPathGlob).sorted().toList();
+        List<String> publicExclusions = scopes.stream().filter(PublicScope::isExcluded)
+                .map(PublicScope::getPathGlob).sorted().toList();
+        return new RepoDto(r.getName(), owner, r.getVisibility(), myRole, publicPaths, publicExclusions);
     }
 }

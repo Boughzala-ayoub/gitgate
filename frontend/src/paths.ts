@@ -25,9 +25,28 @@ export function globToRegex(glob: string): RegExp {
   return new RegExp(out + '$')
 }
 
-/** True if `pattern` grants `path`. */
+/** True if `pattern` covers `path` (as a grant or as an exclusion — the rule is the same). */
 export function covers(pattern: string, path: string): boolean {
   if (globToRegex(pattern).test(path)) return true
   const plain = !/[*?]/.test(pattern)
   return plain && path.startsWith(pattern + '/')
+}
+
+/** The minimum a rule needs for access to be explained. */
+export interface Rule {
+  path: string
+  excluded?: boolean
+}
+
+/**
+ * The exclusion covering `path`, if any. Checked first everywhere, because on the server an
+ * exclusion always beats a grant — the UI must not suggest otherwise.
+ */
+export function excludedBy<T extends Rule>(rules: T[], path: string): T | undefined {
+  return rules.find((r) => r.excluded && covers(r.path, path))
+}
+
+/** The grant covering `path`, if any. */
+export function grantedBy<T extends Rule>(rules: T[], path: string): T | undefined {
+  return rules.find((r) => !r.excluded && covers(r.path, path))
 }

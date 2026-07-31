@@ -55,6 +55,40 @@ class GlobMatcherTest {
     }
 
     @Test
+    void anExclusionCarvesAPathOutOfAGrant() {
+        // "the whole backend folder, except the secrets file"
+        GlobMatcher matcher = GlobMatcher.of(List.of("backend"), List.of("backend/secrets.env"));
+
+        assertTrue(matcher.isReadable("backend/db.js"));
+        assertTrue(matcher.isReadable("backend/deep/thing.js"));
+        assertFalse(matcher.isReadable("backend/secrets.env"));
+        assertTrue(matcher.isExcluded("backend/secrets.env"));
+    }
+
+    @Test
+    void exclusionsBeatEvenTheBroadestGrant() {
+        // "public, except anything under private/ and any .env file anywhere"
+        GlobMatcher matcher = GlobMatcher.of(List.of("**"), List.of("private/**", "**/*.env", "*.env"));
+
+        assertTrue(matcher.isReadable("README.md"));
+        assertTrue(matcher.isReadable("src/app.js"));
+        assertFalse(matcher.isReadable("private/keys.txt"));
+        assertFalse(matcher.isReadable("config/prod.env"));
+        assertFalse(matcher.isReadable(".env"));
+    }
+
+    @Test
+    void anExclusionCannotBeDefeatedByAMoreSpecificGrant() {
+        // Order and specificity must not matter: deny always wins, so an operator can't be
+        // tricked into re-granting a path they deliberately carved out.
+        GlobMatcher matcher = GlobMatcher.of(List.of("**", "secret.txt", "vault"), List.of("secret.txt", "vault"));
+
+        assertFalse(matcher.isReadable("secret.txt"));
+        assertFalse(matcher.isReadable("vault/key.pem"), "excluding a folder excludes its subtree");
+        assertTrue(matcher.isReadable("other.txt"));
+    }
+
+    @Test
     void noGlobsMeansDenyEverything() {
         GlobMatcher matcher = GlobMatcher.of(List.of());
 

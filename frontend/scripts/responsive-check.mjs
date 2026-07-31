@@ -155,6 +155,22 @@ try {
           if (seg) seg.click()
         })
         await check(page, w, 'settings-tree-expanded')
+
+        // Carve a file back out of that grant — the row goes struck-through with a Hidden pill
+        // and a chip appears, which is the widest this row ever gets.
+        const carved = await page.evaluate(() => {
+          const btn = [...document.querySelectorAll('.picker-row .btn')]
+            .find((b) => b.textContent.includes('Exclude'))
+          if (!btn) return false
+          btn.click(); return true
+        })
+        if (carved) {
+          await sleep(400)
+          await check(page, w, 'settings-exclusion')
+        } else {
+          console.log(`  [SKIP] exclusion state at ${w}px — no inherited row to exclude`)
+          skipped.push(`exclusion@${w}`)
+        }
       }
       await clickText(page, '.btn', 'Cancel')
 
@@ -165,9 +181,23 @@ try {
         card.click(); return true
       })
       if (wentPublic && hasTree) {
-        await page.waitForSelector('.picker-toggle')
+        // A public repo with no explicit paths is public in full, so rows offer "Exclude"
+        // rather than a Public/Private toggle. Wait for the tree itself, not either control.
+        await page.waitForSelector('.picker-row')
         await sleep(700)
         await check(page, w, 'settings-public-paths')
+
+        // "Public except this file" — the headline case.
+        const hid = await page.evaluate(() => {
+          const btn = [...document.querySelectorAll('.picker-row .btn')]
+            .find((b) => b.textContent.includes('Exclude'))
+          if (!btn) return false
+          btn.click(); return true
+        })
+        if (hid) {
+          await sleep(400)
+          await check(page, w, 'settings-public-except')
+        }
         // Leave the repo as we found it.
         await page.evaluate(() => {
           const card = [...document.querySelectorAll('.choice-card')].find((c) => c.textContent.includes('Private'))

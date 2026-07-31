@@ -135,7 +135,15 @@ git -C app cat-file -t <backend-blob-sha>                # fatal: could not get 
 
 # Anonymous clone of a partially-public repo returns ONLY the public paths:
 git clone http://localhost:8080/app.git                  # → public paths only (or 401 if private)
+
+# On a PUBLIC repo, use the /a/ path to clone as yourself:
+git clone http://alice@localhost:8080/a/app.git          # → alice's view, not the public one
 ```
+
+> **Why `/a/`**: git only sends credentials after a 401, and a public repo never issues one — so a
+> plain clone of a public repo is anonymous even with a username in the URL, and a collaborator
+> would silently receive the smaller public view. The `/a/` path always challenges. Private repos
+> challenge either way, so the prefix only matters for public ones.
 
 `scripts/demo-phase1.ps1` runs the full read-filtering demo end-to-end on Windows.
 
@@ -198,6 +206,11 @@ A working multi-tenant Git platform, not a proof of concept.
 - **Point-and-click permissions**: repo settings show the actual file tree — grant a person
   read or write on a folder or a single file by clicking it, and see at a glance which paths are
   covered by a parent folder or a pattern.
+- **Exclusions**: any grant can have paths carved back out of it, and an exclusion always beats a
+  grant. That covers the two cases enumerating globs can't:
+  - *"public, except these files"* — a repo anyone may clone, with paths that never leave the server.
+  - *"this folder, except that file"* — a contractor with write access to `backend/` but no sight
+    of `backend/secrets.env`.
 - **Public & anonymous access**, including **partially-public repos** (public path globs).
 - **In-browser code browser** served strictly from the viewer's filtered view (access control is
   automatic — a hidden file 404s even by direct URL).

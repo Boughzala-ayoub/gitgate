@@ -438,3 +438,28 @@ table.list { min-width: 480px; }
   .person-actions .btn { flex: 1; justify-content: center; }
   .Label.role { order: 3; }
 }
+
+/* ===== exclusions: a path carved back out of a grant ===== */
+.picker-row.is-excluded { background: var(--danger-canvas); }
+.picker-label.struck { text-decoration: line-through; color: var(--fg-muted); }
+.picker-status { display: flex; align-items: center; gap: 8px; flex: none; }
+.pill {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .3px;
+  padding: 2px 8px; border-radius: 999px;
+}
+.pill-hidden { color: var(--danger-fg); background: #ffebe9; }
+.chip-excluded { border-color: var(--danger-border); background: var(--danger-canvas); color: var(--danger-fg); }
+.chip-excluded code { text-decoration: line-through; }
+.chip-access.hidden { color: var(--danger-fg); background: #ffebe9; }
+.picker-pattern-mode {
+  display: inline-flex; align-items: center; gap: 4px; flex: none;
+  font-size: 12px; color: var(--fg-muted); white-space: nowrap;
+}
+
+@media (max-width: 600px) {
+  .picker-status { width: 100%; justify-content: space-between; }
+  .picker-status .btn { flex: none; }
+  .picker-pattern { flex-wrap: wrap; }
+  .picker-pattern .form-control { flex: 1 1 100%; }
+}

@@ -63,7 +63,12 @@ public class BasicAuthFilter extends OncePerRequestFilter {
         if (header == null || !header.startsWith("Basic ")) {
             // No credentials: permit anonymous READ of a public repo and anonymous browsing
             // (the browse service enforces access); everything else needs auth.
-            boolean anonGitRead = gitPath && isReadOperation(request, uri) && aclService.isPublicRepo(extractRepo(uri));
+            //
+            // …unless this is the /a/ path, which always challenges. Git only sends credentials
+            // after a 401, so on a public repo it would otherwise stay anonymous and a member
+            // would silently be served the public view instead of their own, larger one.
+            boolean anonGitRead = gitPath && !isAuthenticatedPath(uri)
+                    && isReadOperation(request, uri) && aclService.isPublicRepo(extractRepo(uri));
             boolean openRead = uri.startsWith("/api/browse/") || uri.startsWith("/api/explore");
             if (anonGitRead || openRead) {
                 if (!rateLimiter.allow(request.getRemoteAddr())) {
@@ -107,6 +112,11 @@ public class BasicAuthFilter extends OncePerRequestFilter {
                 || uri.endsWith("/git-receive-pack");
     }
 
+    /** {@code /a/<repo>.git/…} — the clone path that always demands credentials. */
+    public static boolean isAuthenticatedPath(String uri) {
+        return uri.startsWith("/a/");
+    }
+
     /** True if this git request is a fetch (read); receive-pack (push) is a write. */
     private boolean isReadOperation(HttpServletRequest request, String uri) {
         if (uri.endsWith("/git-upload-pack")) {
@@ -124,6 +134,9 @@ public class BasicAuthFilter extends OncePerRequestFilter {
     /** First path segment of a git URL, e.g. {@code /app.git/info/refs} → {@code app.git}. */
     private String extractRepo(String uri) {
         String s = uri.startsWith("/") ? uri.substring(1) : uri;
+        if (s.startsWith("a/")) {
+            s = s.substring(2);
+        }
         int slash = s.indexOf('/');
         return slash >= 0 ? s.substring(0, slash) : s;
     }
