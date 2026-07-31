@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { api } from './api'
-import { EyeClosedIcon, PeopleIcon, PlusIcon, XIcon } from './icons'
+import { CheckIcon, EyeClosedIcon, FileIcon, PeopleIcon, PlusIcon, RepoIcon, XIcon } from './icons'
 import { cx, ErrorNote, Spinner, useAsync } from './ui'
 import PathPicker from './PathPicker'
 import type { Collaborator, Scope } from './types'
@@ -129,6 +129,17 @@ function AccessEditor({
   const [scopes, setScopes] = useState<Scope[]>(existing?.scopes ?? [])
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
+  // A membership with no grants means the whole repository on the server, so that's how an
+  // existing one round-trips back into the editor.
+  const [wholeRepo, setWholeRepo] = useState(() => !(existing?.scopes ?? []).some((s) => !s.excluded))
+
+  const droppedGrants = scopes.filter((s) => !s.excluded).length
+
+  /** Switching to whole-repo drops the grants (exclusions survive) — visibly, not silently. */
+  function chooseWholeRepo() {
+    setScopes(scopes.filter((s) => s.excluded))
+    setWholeRepo(true)
+  }
 
   async function save() {
     setError(''); setSaving(true)
@@ -173,13 +184,33 @@ function AccessEditor({
 
       <div className="field">
         <span className="field-label">Which files can they see?</span>
-        <p className="field-hint">
-          Select nothing to give access to the whole repository. Selecting a folder includes
-          everything inside it, and <b>Read + write</b> grants both. Drill into a granted folder
-          and use <b>Exclude</b> to keep individual files out — an exclusion always wins, so it
-          can't be undone by a broader rule.
+        <div className="choice-cards" role="radiogroup" aria-label="Which files can they see?">
+          <button className={cx('choice-card', wholeRepo && 'selected')}
+                  role="radio" aria-checked={wholeRepo} onClick={chooseWholeRepo}>
+            <span className="choice-card-title"><RepoIcon size={14} /> Entire repository</span>
+            <span className="choice-card-hint">
+              Everything, then hide the odd file or folder.
+              {wholeRepo || droppedGrants === 0 ? '' : ` Drops ${droppedGrants} selected path${droppedGrants > 1 ? 's' : ''}.`}
+            </span>
+            <span className="choice-card-mark" aria-hidden="true"><CheckIcon size={12} /></span>
+          </button>
+          <button className={cx('choice-card', !wholeRepo && 'selected')}
+                  role="radio" aria-checked={!wholeRepo} onClick={() => setWholeRepo(false)}>
+            <span className="choice-card-title"><FileIcon size={14} /> Specific paths</span>
+            <span className="choice-card-hint">Nothing by default — pick what they may read or change.</span>
+            <span className="choice-card-mark" aria-hidden="true"><CheckIcon size={12} /></span>
+          </button>
+        </div>
+        <p className="field-hint" style={{ marginTop: 10 }}>
+          {wholeRepo
+            ? <>They get the whole repository at the access level set by <b>Role</b> above — use{' '}
+              <b>Exclude</b> on any row to keep that file or folder out of their clone. An exclusion
+              always wins, so it can't be undone by a broader rule.</>
+            : <>Selecting a folder includes everything inside it, and <b>Read + write</b> grants
+              both. Drill into a granted folder and use <b>Exclude</b> to carve individual files
+              back out.</>}
         </p>
-        <PathPicker repo={repo} mode="rw" value={scopes} onChange={setScopes} />
+        <PathPicker repo={repo} mode="rw" value={scopes} onChange={setScopes} wholeRepo={wholeRepo} />
       </div>
 
       {error && <ErrorNote message={error} />}

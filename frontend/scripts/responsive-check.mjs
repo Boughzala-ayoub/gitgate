@@ -135,31 +135,60 @@ try {
 
       // An empty repository renders "no commits yet" and has no tree to exercise. Say so
       // loudly rather than reporting a pass that skipped the densest part of the UI.
-      const hasTree = await page.evaluate(() => !!document.querySelector('.picker-row'))
+      const hasTree = await page.evaluate(() => !!document.querySelector('.panel .picker-row'))
       if (!hasTree) {
         console.log(`  [SKIP] picker states at ${w}px — the repo has no commits, so there is no file tree`)
         skipped.push(`picker@${w}`)
       }
 
-      // Expand a folder: deeper indentation is where a tree starts pushing rows wide.
+      // The editor opens in "Entire repository" mode, where every row offers Exclude. Carve one
+      // out — this is the whole-repo-minus-a-file shape, and the default state people land on.
+      if (hasTree) {
+        const carvedWhole = await page.evaluate(() => {
+          const btn = [...document.querySelectorAll('.panel .picker-row .btn')]
+            .find((b) => b.textContent.includes('Exclude'))
+          if (!btn) return false
+          btn.click(); return true
+        })
+        if (carvedWhole) {
+          await sleep(400)
+          await check(page, w, 'settings-whole-repo-except')
+        } else {
+          console.log(`  [SKIP] whole-repo exclusion at ${w}px — no row offered Exclude`)
+          skipped.push(`whole-repo@${w}`)
+        }
+      }
+
+      // Switch to per-path mode; the segmented controls below only exist in that mode.
+      await page.evaluate(() => {
+        const card = [...document.querySelectorAll('.panel .choice-card')]
+          .find((c) => c.textContent.includes('Specific paths'))
+        if (card) card.click()
+      })
+      await sleep(400)
+
+      // Grant one folder read+write and expand it, so its children render as inherited rows —
+      // that is the only state where a per-file Exclude is offered. Both actions must target the
+      // SAME row, or the exclusion step finds nothing to click.
       const expanded = await page.evaluate(() => {
-        const t = document.querySelector('.picker-twisty[aria-expanded="false"]')
-        if (!t) return false
-        t.click(); return true
+        const row = [...document.querySelectorAll('.panel .picker-row')]
+          .find((r) => r.querySelector('.picker-twisty[aria-expanded="false"]')
+                    && r.querySelector('.segmented-item'))
+        if (!row) return false
+        const grant = [...row.querySelectorAll('.segmented-item')]
+          .find((b) => b.textContent.trim() === 'Read + write')
+        if (grant) grant.click()
+        row.querySelector('.picker-twisty[aria-expanded="false"]').click()
+        return true
       })
       if (expanded) {
-        await sleep(700)
-        // Grant something so the chip summary renders too.
-        await page.evaluate(() => {
-          const seg = [...document.querySelectorAll('.segmented-item')].find((b) => b.textContent.trim() === 'Read + write')
-          if (seg) seg.click()
-        })
+        await sleep(900) // children load over the network
         await check(page, w, 'settings-tree-expanded')
 
         // Carve a file back out of that grant — the row goes struck-through with a Hidden pill
         // and a chip appears, which is the widest this row ever gets.
         const carved = await page.evaluate(() => {
-          const btn = [...document.querySelectorAll('.picker-row .btn')]
+          const btn = [...document.querySelectorAll('.panel .picker-row .btn')]
             .find((b) => b.textContent.includes('Exclude'))
           if (!btn) return false
           btn.click(); return true

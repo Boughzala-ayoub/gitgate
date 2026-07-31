@@ -30,12 +30,18 @@ type RowState =
   | { kind: 'explicit'; access: Access }
 
 export default function PathPicker({
-  repo, mode, value, onChange,
+  repo, mode, value, onChange, wholeRepo = false,
 }: {
   repo: string
   mode: PickerMode
   value: Scope[]
   onChange: (scopes: Scope[]) => void
+  /**
+   * Everything is granted up front and the job is to carve paths back out — the shape the server
+   * resolves from a membership with no grants and N exclusions. Read mode is always like this
+   * when nothing is marked public.
+   */
+  wholeRepo?: boolean
 }) {
   const [ref, setRef] = useState<string | null>(null)
   const [empty, setEmpty] = useState(false)
@@ -52,9 +58,9 @@ export default function PathPicker({
   }, [repo])
 
   const grants = value.filter((s) => !s.excluded)
-  // Public with nothing selected means the whole repo is public; a collaborator with no grants
-  // has no access until one is added.
-  const openByDefault = mode === 'read' && grants.length === 0
+  // Nothing selected means "all of it" in two cases: a public repo with no explicit public paths,
+  // and a collaborator granted the entire repository. Otherwise a row is off until granted.
+  const openByDefault = grants.length === 0 && (mode === 'read' || wholeRepo)
 
   function stateOf(path: string): RowState {
     const exclusion = excludedBy(value, path)
@@ -219,7 +225,7 @@ function RowControl({
       <span className="picker-status">
         {state.kind === 'inherited'
           ? <span className="picker-inherited">via <code>{state.via}</code></span>
-          : <span className="picker-inherited">public</span>}
+          : <span className="picker-inherited">{mode === 'read' ? 'public' : 'included'}</span>}
         <button className="btn btn-sm" onClick={onExclude} title={`Hide ${path}`}>
           <EyeClosedIcon size={12} /> Exclude
         </button>
@@ -296,7 +302,11 @@ function SelectionSummary({
           <span className="muted">
             {mode === 'read'
               ? (openByDefault ? 'The entire repository is public.' : 'Nothing public yet.')
-              : 'No paths selected — this grants access to the whole repository.'}
+              // In "specific paths" mode with nothing picked, the server still resolves this to
+              // the whole repository — say so rather than let it surprise them on save.
+              : (openByDefault
+                ? 'The entire repository.'
+                : 'No paths picked yet — saving now would grant the entire repository.')}
           </span>
         ) : (
           <span className="muted">{grants.length} path{grants.length > 1 ? 's' : ''} granted</span>
