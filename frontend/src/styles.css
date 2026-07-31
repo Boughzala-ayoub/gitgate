@@ -10,6 +10,8 @@
   --fg-muted: #656d76;
   --accent: #0969da;
   --success-fg: #1a7f37;
+  --attention-fg: #9a6700;
+  --accent-hover: #0860ca;
   --danger-fg: #cf222e;
   --danger-border: rgba(255, 129, 130, 0.4);
   --danger-canvas: #fff8f8;
@@ -86,6 +88,8 @@ a:hover { text-decoration: underline; }
 }
 .btn:hover { background: var(--btn-hover); border-color: rgba(31, 35, 40, 0.25); text-decoration: none; }
 .btn:disabled { opacity: .55; cursor: default; }
+.btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.btn:active:not(:disabled) { transform: translateY(1px); }
 .btn-primary { background: var(--btn-primary-bg); border-color: var(--btn-border); color: #fff; }
 .btn-primary:hover { background: var(--btn-primary-hover); }
 .btn-danger { color: var(--danger-fg); background: var(--canvas); }
@@ -327,6 +331,38 @@ table.list { min-width: 480px; }
 .field-hint { margin: 0 0 10px; font-size: 12px; color: var(--fg-muted); max-width: 68ch; }
 .panel { background: var(--canvas-subtle); border-top: 1px solid var(--border-muted); }
 
+/* Vertical rhythm: sections read as a stack of distinct decisions, not one wall. */
+.settings > .Box { margin-bottom: 20px; }
+.settings > .Box:last-child { margin-bottom: 0; }
+.Box-header .Box-title { font-size: 15px; letter-spacing: -0.1px; }
+
+/* Save row: the action, then an honest status beside it. */
+.form-actions {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  padding-top: 4px;
+}
+.form-actions-status { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; min-height: 20px; }
+.status-dirty { color: var(--fg-muted); }
+.status-dirty::before {
+  content: ''; display: inline-block; width: 6px; height: 6px; border-radius: 50%;
+  background: var(--attention-fg); margin-right: 6px; vertical-align: middle;
+}
+.status-saved { display: inline-flex; align-items: center; gap: 4px; color: var(--success-fg); font-weight: 600; }
+
+/* Danger zone: quiet until you look at it, then unmistakable. A red box shouting at the bottom
+   of every settings page trains people to ignore red. */
+.Box-danger { border-color: var(--border); }
+.Box-danger .Box-header { background: var(--canvas-subtle); border-color: var(--border); }
+.Box-danger .Box-title { color: var(--danger-fg); }
+.danger-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.danger-copy { min-width: 0; flex: 1 1 320px; }
+.danger-copy .muted { font-size: 12px; margin-top: 2px; }
+
+/* Empty states worth reading. */
+.blankslate-icon { color: var(--fg-muted); opacity: .6; }
+.blankslate-title { font-weight: 600; color: var(--fg); margin: 10px 0 4px; }
+.blankslate-hint { margin: 0 auto 14px; max-width: 44ch; font-size: 13px; }
+
 /* ===== people with access ===== */
 .person { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-top: 1px solid var(--border-muted); }
 .person:hover { background: var(--canvas-subtle); }
@@ -341,6 +377,17 @@ table.list { min-width: 480px; }
 .person-scopes { margin-top: 4px; display: flex; flex-wrap: wrap; gap: 4px; font-size: 12px; }
 .person-actions { display: flex; gap: 6px; flex: none; }
 
+.person { transition: background-color .12s ease, box-shadow .12s ease; }
+/* The open editor is visually welded to the row it belongs to. */
+.person.is-editing { background: var(--canvas-subtle); box-shadow: inset 3px 0 0 var(--accent); }
+.person.is-editing + .panel, .panel { box-shadow: inset 3px 0 0 var(--accent); }
+.person-name { font-size: 14px; }
+.person-actions .btn-danger { padding-left: 10px; padding-right: 10px; }
+.Label.role {
+  font-weight: 600; color: var(--fg-muted); background: var(--canvas-subtle);
+  border-color: var(--border-muted); flex: none;
+}
+
 /* ===== chips (a granted path) ===== */
 .chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .chip {
@@ -353,12 +400,15 @@ table.list { min-width: 480px; }
   font-size: 10px; text-transform: uppercase; letter-spacing: .4px; font-weight: 600;
   color: var(--success-fg); background: #dafbe1; border-radius: 999px; padding: 1px 6px;
 }
-.chip-access.write { color: #9a6700; background: #fff8c5; }
+.chip-access.write { color: var(--attention-fg); background: #fff8c5; }
 .chip-x {
   border: none; background: none; cursor: pointer; color: var(--fg-muted);
   font-size: 14px; line-height: 1; padding: 2px 6px; border-radius: 999px;
 }
 .chip-x:hover { background: var(--neutral-muted); color: var(--danger-fg); }
+
+.chip { transition: border-color .1s ease, background-color .1s ease; }
+.chip-x:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 
 /* ===== path picker ===== */
 .picker { border: 1px solid var(--border); border-radius: var(--radius); background: var(--canvas); max-width: 760px; }
@@ -388,6 +438,10 @@ table.list { min-width: 480px; }
 .picker-pattern { display: flex; gap: 6px; }
 .picker-pattern .form-control { flex: 1; min-width: 0; font-size: 12px; }
 
+.picker-row { transition: background-color .1s ease; }
+.picker-twisty:focus-visible, .picker-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.picker-summary-head { display: flex; align-items: center; flex-wrap: wrap; gap: 2px; }
+
 /* ===== segmented control (no access / read / write) ===== */
 .segmented { display: inline-flex; flex: none; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; background: var(--canvas); }
 .segmented-item {
@@ -405,6 +459,10 @@ table.list { min-width: 480px; }
 }
 .picker-toggle.on { background: var(--success-fg); border-color: var(--success-fg); color: #fff; font-weight: 600; }
 
+.segmented-item { transition: background-color .1s ease, color .1s ease; }
+.segmented-item:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; z-index: 1; position: relative; }
+.segmented-item.selected:hover { background: var(--accent-hover); }
+
 /* ===== selectable cards (role, visibility) ===== */
 .role-options, .choice-cards { display: grid; gap: 8px; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
 .role-option, .choice-card {
@@ -416,6 +474,22 @@ table.list { min-width: 480px; }
 .role-option.selected, .choice-card.selected { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); background: #ddf4ff40; }
 .role-option-name, .choice-card-title { font-weight: 600; font-size: 13px; display: flex; align-items: center; gap: 6px; }
 .role-option-hint, .choice-card-hint { font-size: 12px; color: var(--fg-muted); }
+
+.role-option, .choice-card {
+  position: relative; transition: border-color .1s ease, box-shadow .1s ease, background-color .1s ease;
+}
+.role-option:active, .choice-card:active { transform: translateY(1px); }
+.role-option:focus-visible, .choice-card:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+/* A tick in the corner: colour alone shouldn't carry "this one is selected". */
+.choice-card { padding-right: 40px; }
+.choice-card-mark {
+  position: absolute; top: 10px; right: 12px;
+  width: 18px; height: 18px; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--accent); color: #fff; opacity: 0; transform: scale(.7);
+  transition: opacity .12s ease, transform .12s ease;
+}
+.choice-card.selected .choice-card-mark { opacity: 1; transform: scale(1); }
 
 /* ===== phones: reshape rather than scroll ===== */
 @media (max-width: 600px) {
@@ -437,6 +511,20 @@ table.list { min-width: 480px; }
   .person-actions { order: 4; width: 100%; }
   .person-actions .btn { flex: 1; justify-content: center; }
   .Label.role { order: 3; }
+
+  /* A short nested scroll box is miserable on touch — give the tree room to breathe. */
+  .picker-tree { max-height: 60vh; }
+
+  /* Touch ergonomics: every control a thumb can actually hit. */
+  .btn, .btn-sm { min-height: 44px; }
+  .segmented-item, .picker-toggle { min-height: 44px; }
+  .picker-twisty { width: 44px; height: 44px; }
+  .chip { min-height: 44px; }
+  .chip-x { min-width: 44px; align-self: stretch; }
+  .choice-card, .role-option { min-height: 68px; justify-content: center; }
+  .danger-row .btn { width: 100%; justify-content: center; }
+  .form-actions .btn { width: 100%; justify-content: center; }
+  .form-actions-status { width: 100%; }
 }
 
 /* ===== exclusions: a path carved back out of a grant ===== */

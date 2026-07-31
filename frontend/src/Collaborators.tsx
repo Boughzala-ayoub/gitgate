@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { api } from './api'
-import { EyeClosedIcon, PlusIcon, XIcon } from './icons'
+import { EyeClosedIcon, PeopleIcon, PlusIcon, XIcon } from './icons'
 import { cx, ErrorNote, Spinner, useAsync } from './ui'
 import PathPicker from './PathPicker'
 import type { Collaborator, Scope } from './types'
@@ -53,13 +53,20 @@ export default function Collaborators({ name }: { name: string }) {
         <>
           {collabs.data.length === 0 && !adding && (
             <div className="blankslate">
-              <p>Only you can see this repository.</p>
-              <button className="btn btn-sm" onClick={() => setAdding(true)}>Add your first collaborator</button>
+              <PeopleIcon size={24} className="blankslate-icon" />
+              <p className="blankslate-title">No collaborators yet</p>
+              <p className="blankslate-hint">
+                Only you can see this repository. Add someone and choose exactly which files
+                they can read or change.
+              </p>
+              <button className="btn btn-primary" onClick={() => setAdding(true)}>
+                <PlusIcon size={14} /> Add your first collaborator
+              </button>
             </div>
           )}
           {collabs.data.map((c) => (
             <div key={c.username}>
-              <div className="person">
+              <div className={cx('person', editing === c.username && 'is-editing')}>
                 <span className="avatar" aria-hidden="true">{c.username.slice(0, 2).toUpperCase()}</span>
                 <div className="person-main">
                   <div className="person-name">{c.username}</div>

@@ -46,11 +46,11 @@ export default function RepoDetail({ name, me, onBack }: { name: string; me: Me;
       )}
 
       {tab === 'settings' && canManage && (
-        <>
+        <div className="settings">
           <Visibility repo={r} canManage onChange={repo.reload} />
           <Collaborators name={name} />
           <DangerZone name={name} onDeleted={onBack} />
-        </>
+        </div>
       )}
     </>
   )
@@ -89,10 +89,18 @@ function DangerZone({ name, onDeleted }: { name: string; onDeleted: () => void }
   }
   return (
     <div className="Box Box-danger">
-      <div className="Box-header"><h2 className="Box-title">Danger zone</h2></div>
-      <div className="Box-body row between">
-        <div><b>Delete this repository</b><div className="muted">Removes the repo and all its access rules.</div></div>
-        <button className="btn btn-danger" onClick={del}>Delete</button>
+      <div className="Box-header">
+        <h2 className="Box-title">Danger zone</h2>
+      </div>
+      <div className="Box-body danger-row">
+        <div className="danger-copy">
+          <b>Delete this repository</b>
+          <div className="muted">
+            Removes the repository, every access rule on it, and the clones the server keeps.
+            This cannot be undone.
+          </div>
+        </div>
+        <button className="btn btn-danger" onClick={del}>Delete this repository</button>
       </div>
       {error && <div className="Box-body"><ErrorNote message={error} /></div>}
     </div>
