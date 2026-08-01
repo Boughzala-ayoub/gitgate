@@ -415,7 +415,8 @@ table.list { min-width: 480px; }
 .picker-tree { max-height: 320px; overflow-y: auto; overflow-x: hidden; }
 .picker-empty { padding: 16px; color: var(--fg-muted); font-size: 13px; }
 .picker-row {
-  display: flex; align-items: center; gap: 8px;
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(252px, max-content);
+  align-items: center; gap: 8px;
   padding: 5px 10px; border-bottom: 1px solid var(--border-muted); min-height: 36px;
 }
 .picker-row:last-child { border-bottom: none; }
@@ -527,7 +528,8 @@ table.list { min-width: 480px; }
   .Box-header.between .btn { width: 100%; justify-content: center; }
 
   /* Name on one line, the access control full-width underneath. */
-  .picker-row { flex-direction: column; align-items: stretch; gap: 6px; padding: 8px 10px; }
+  .picker-row { grid-template-columns: 1fr; align-items: stretch; gap: 6px; padding: 8px 10px; }
+  .picker-row > .segmented, .picker-row > .picker-status { justify-self: stretch; }
   .picker-name { width: 100%; }
   .picker-label { white-space: normal; overflow-wrap: anywhere; }
   .segmented { display: flex; width: 100%; }
@@ -564,8 +566,9 @@ table.list { min-width: 480px; }
 .picker-row.is-excluded { background: var(--danger-canvas); }
 .picker-label.struck { text-decoration: line-through; color: var(--fg-muted); }
 .picker-status { display: flex; align-items: center; justify-content: flex-end; gap: 8px; flex: none; }
-/* Every row's control occupies the same column, whichever control it is. */
-.picker-row > .segmented, .picker-row > .picker-status { min-width: 252px; }
+/* Every row's control shares one right-hand column and sits at its end, so the controls line up
+   without any of them being stretched to fill it. */
+.picker-row > .segmented, .picker-row > .picker-status { justify-self: end; min-width: 0; }
 .pill {
   display: inline-flex; align-items: center; gap: 4px;
   font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .3px;
