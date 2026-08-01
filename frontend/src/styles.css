@@ -441,6 +441,12 @@ table.list { min-width: 480px; }
 .picker-row { transition: background-color .1s ease; }
 .picker-twisty:focus-visible, .picker-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .picker-summary-head { display: flex; align-items: center; flex-wrap: wrap; gap: 2px; }
+/* Bulk clears sit opposite the counts, so removing one rule and removing them all don't look
+   like the same weight of action. */
+.picker-summary-actions { margin-left: auto; display: inline-flex; gap: 10px; flex: none; }
+.picker-summary-actions .btn-link { font-size: 12px; color: var(--fg-muted); }
+.picker-summary-actions .btn-link:hover { color: var(--danger-fg); }
+.picker-summary-actions .btn-link:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 /* ===== segmented control (no access / read / write) ===== */
 .segmented { display: inline-flex; flex: none; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; background: var(--canvas); }
@@ -511,6 +517,9 @@ table.list { min-width: 480px; }
   .person-actions { order: 4; width: 100%; }
   .person-actions .btn { flex: 1; justify-content: center; }
   .Label.role { order: 3; }
+
+  /* Bulk clears drop to their own line rather than crowding the counts. */
+  .picker-summary-actions { margin-left: 0; width: 100%; padding-top: 6px; }
 
   /* A short nested scroll box is miserable on touch — give the tree room to breathe. */
   .picker-tree { max-height: 60vh; }

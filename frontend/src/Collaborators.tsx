@@ -113,6 +113,17 @@ export default function Collaborators({ name }: { name: string }) {
 }
 
 /**
+ * What the server would store for a membership. Comparing signatures is how the editor knows
+ * whether anything actually changed; the role and the rule set are all that get persisted.
+ */
+function membershipSignature(role: string, scopes: Scope[]): string {
+  const rules = scopes
+    .map((s) => `${s.excluded ? '-' : '+'}${s.path}:${s.write ? 'w' : 'r'}`)
+    .sort()
+  return [role, ...rules].join('|')
+}
+
+/**
  * Add a collaborator or change an existing one's access. The server upserts by (repo, user), so
  * both cases are the same request — editing is just adding with the username locked.
  */
@@ -134,6 +145,12 @@ function AccessEditor({
   const [wholeRepo, setWholeRepo] = useState(() => !(existing?.scopes ?? []).some((s) => !s.excluded))
 
   const droppedGrants = scopes.filter((s) => !s.excluded).length
+
+  // Editing an existing collaborator should only offer to save something that differs from what
+  // is already stored — otherwise "Update access" invites a pointless write on every open.
+  const dirty = existing
+    ? membershipSignature(role, scopes) !== membershipSignature(existing.role, existing.scopes)
+    : username.trim() !== ''
 
   /** Switching to whole-repo drops the grants (exclusions survive) — visibly, not silently. */
   function chooseWholeRepo() {
@@ -214,11 +231,15 @@ function AccessEditor({
       </div>
 
       {error && <ErrorNote message={error} />}
-      <div className="row">
-        <button className="btn btn-primary" disabled={!username.trim() || saving} onClick={save}>
+      <div className="form-actions">
+        <button className="btn btn-primary" disabled={!username.trim() || saving || !dirty} onClick={save}>
           {saving ? 'Saving…' : existing ? 'Update access' : 'Add collaborator'}
         </button>
         <button className="btn" onClick={onCancel}>Cancel</button>
+        <span className="form-actions-status" role="status">
+          {existing && !dirty && !saving && <span className="muted">No changes yet</span>}
+          {existing && dirty && !saving && <span className="status-dirty">Unsaved changes</span>}
+        </span>
       </div>
     </div>
   )

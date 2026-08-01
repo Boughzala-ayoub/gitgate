@@ -110,7 +110,8 @@ export default function PathPicker({
           />
         </div>
       )}
-      <SelectionSummary mode={mode} value={value} onChange={onChange} openByDefault={openByDefault} />
+      <SelectionSummary mode={mode} value={value} onChange={onChange}
+                        openByDefault={openByDefault} wholeRepo={wholeRepo} />
     </div>
   )
 }
@@ -275,25 +276,30 @@ function RowControl({
 
 /** Everything currently granted or hidden, including patterns the tree can't represent. */
 function SelectionSummary({
-  mode, value, onChange, openByDefault,
+  mode, value, onChange, openByDefault, wholeRepo,
 }: {
   mode: PickerMode
   value: Scope[]
   onChange: (scopes: Scope[]) => void
   openByDefault: boolean
+  wholeRepo: boolean
 }) {
   const [pattern, setPattern] = useState('')
   const [asExclusion, setAsExclusion] = useState(false)
+  // Granting a path while in whole-repository mode would contradict the mode, so patterns added
+  // there are always carve-outs.
+  const patternHides = wholeRepo || asExclusion
 
   function addPattern() {
     const path = pattern.trim()
     if (!path || value.some((s) => s.path === path)) { setPattern(''); return }
-    onChange([...value, { path, read: !asExclusion, write: false, excluded: asExclusion }])
+    onChange([...value, { path, read: !patternHides, write: false, excluded: patternHides }])
     setPattern('')
   }
 
   const grants = value.filter((s) => !s.excluded)
   const exclusions = value.filter((s) => s.excluded)
+  const bothKinds = grants.length > 0 && exclusions.length > 0
 
   return (
     <div className="picker-summary">
@@ -313,6 +319,23 @@ function SelectionSummary({
         )}
         {exclusions.length > 0 && (
           <span className="muted"> · {exclusions.length} hidden</span>
+        )}
+        {value.length > 0 && (
+          <span className="picker-summary-actions">
+            {bothKinds && (
+              <>
+                <button className="btn-link" onClick={() => onChange(exclusions)}>
+                  Clear granted
+                </button>
+                <button className="btn-link" onClick={() => onChange(grants)}>
+                  Clear hidden
+                </button>
+              </>
+            )}
+            <button className="btn-link" onClick={() => onChange([])}>
+              Clear all
+            </button>
+          </span>
         )}
       </div>
 
@@ -342,15 +365,21 @@ function SelectionSummary({
       <div className="picker-pattern">
         <input
           className="form-control"
-          placeholder={asExclusion ? 'Hide a pattern, e.g. **/*.env' : 'Add a pattern, e.g. *.md or docs/**'}
+          placeholder={patternHides ? 'Hide a pattern, e.g. **/*.env' : 'Add a pattern, e.g. *.md or docs/**'}
           value={pattern}
           onChange={(e) => setPattern(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addPattern() } }}
         />
-        <label className="picker-pattern-mode">
-          <input type="checkbox" checked={asExclusion} onChange={(e) => setAsExclusion(e.target.checked)} />
-          hide
-        </label>
+        {wholeRepo ? (
+          <span className="picker-pattern-mode" title="In entire-repository mode a pattern can only hide paths">
+            hides
+          </span>
+        ) : (
+          <label className="picker-pattern-mode">
+            <input type="checkbox" checked={asExclusion} onChange={(e) => setAsExclusion(e.target.checked)} />
+            hide
+          </label>
+        )}
         <button className="btn btn-sm" onClick={addPattern} disabled={!pattern.trim()}>Add</button>
       </div>
     </div>
