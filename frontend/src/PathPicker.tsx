@@ -154,9 +154,14 @@ function Level({
         const isOpen = open[entry.path]
         const granted = state.kind === 'inherited' || state.kind === 'open'
           || (state.kind === 'explicit' && state.access !== 'none')
+        // A rule set on this row itself, as opposed to one it merely inherits. Only these get a
+        // marker, so the tree shows at a glance which rows you actually decided about.
+        const ownRule = (state.kind === 'explicit' && state.access !== 'none')
+          || (state.kind === 'excluded' && !state.via)
         return (
           <div key={entry.path}>
-            <div className={cx('picker-row', granted && 'is-granted', state.kind === 'excluded' && 'is-excluded')}>
+            <div className={cx('picker-row', granted && 'is-granted',
+              state.kind === 'excluded' && 'is-excluded', ownRule && 'is-own')}>
               <div className="picker-name" style={{ paddingLeft: depth * 16 }}>
                 {entry.type === 'tree' ? (
                   <button
@@ -253,7 +258,7 @@ function RowControl({
   // Write always includes read: the server merges a push using the paths the pusher can see, so
   // write-without-read would silently drop their changes. One choice, three levels.
   const options: Array<{ key: Access; text: string; title: string }> = [
-    { key: 'none', text: 'No access', title: 'Hidden from them entirely' },
+    { key: 'none', text: 'None', title: 'Hidden from them entirely' },
     { key: 'read', text: 'Read', title: 'Can clone and browse, cannot change' },
     { key: 'write', text: 'Read + write', title: 'Can clone, browse and push changes' },
   ]
@@ -262,7 +267,9 @@ function RowControl({
       {options.map((o) => (
         <button
           key={o.key}
-          className={cx('segmented-item', state.access === o.key && 'selected')}
+          // The emphasis ramps with the access granted: "None" is the quiet default, read is a
+          // tint, write is solid. Otherwise every untouched row shouts louder than the granted one.
+          className={cx('segmented-item', `segmented-item--${o.key}`, state.access === o.key && 'selected')}
           aria-pressed={state.access === o.key}
           title={o.title}
           onClick={() => onSet(o.key)}

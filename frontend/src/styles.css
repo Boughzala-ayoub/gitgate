@@ -420,7 +420,11 @@ table.list { min-width: 480px; }
 }
 .picker-row:last-child { border-bottom: none; }
 .picker-row:hover { background: var(--canvas-subtle); }
-.picker-row.is-granted { background: #ddf4ff40; }
+.picker-row.is-granted { background: #ddf4ff2e; }
+/* Only rows carrying their own rule get an edge marker, so the tree reads as
+   "these are the decisions I made" instead of a wall of highlighted rows. */
+.picker-row.is-own { box-shadow: inset 3px 0 0 var(--accent); }
+.picker-row.is-own.is-excluded { box-shadow: inset 3px 0 0 var(--danger-fg); }
 .picker-name { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0; }
 .picker-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
 .picker-hint { color: var(--fg-muted); }
@@ -430,7 +434,11 @@ table.list { min-width: 480px; }
   display: inline-flex; align-items: center; justify-content: center;
 }
 .picker-twisty:hover { background: var(--neutral-muted); }
-.picker-inherited { flex: none; font-size: 11px; color: var(--fg-muted); }
+.picker-inherited {
+  flex: none; font-size: 11px; color: var(--fg-muted);
+  background: var(--canvas-subtle); border: 1px solid var(--border-muted);
+  border-radius: 999px; padding: 1px 8px; white-space: nowrap;
+}
 .picker-inherited code { font-family: var(--mono); }
 .picker-summary { border-top: 1px solid var(--border); padding: 10px; background: var(--canvas-subtle); border-radius: 0 0 var(--radius) var(--radius); }
 .picker-summary-head { font-size: 12px; margin-bottom: 8px; }
@@ -457,12 +465,28 @@ table.list { min-width: 480px; }
 .segmented-item:first-child { border-left: none; }
 .segmented-item:hover { background: var(--canvas-subtle); }
 .segmented-item.selected { background: var(--accent); color: #fff; font-weight: 600; }
+/* "None" is the default state, not an achievement — keep it quiet. */
+.segmented-item--none.selected { background: var(--neutral-muted); color: var(--fg); }
+.segmented-item--none.selected:hover { background: rgba(175, 184, 193, 0.35); }
+/* Read is a tint; read+write is solid. Emphasis tracks how much is being handed over. */
+.segmented-item--read.selected { background: #ddf4ff; color: var(--accent); }
+.segmented-item--read.selected:hover { background: #b6e3ff; }
+.segmented-item--write.selected { background: var(--accent); color: #fff; }
 
 /* Public/private toggle used for public paths. */
 .picker-toggle {
   flex: none; border: 1px solid var(--border); border-radius: var(--radius); background: var(--canvas);
   font: inherit; font-size: 12px; padding: 3px 12px; cursor: pointer; color: var(--fg-muted);
 }
+/* An Exclude on every inherited row would be a wall of buttons, so keep it recessive until the
+   pointer arrives — but only where hovering exists. On touch there is no hover, and a borderless
+   button reads as text, so it stays fully drawn there. */
+@media (hover: hover) {
+  .picker-row .picker-status > .btn { color: var(--fg-muted); border-color: transparent; background: transparent; }
+  .picker-row:hover .picker-status > .btn,
+  .picker-row .picker-status > .btn:focus-visible { border-color: var(--border); background: var(--btn-bg); }
+}
+.picker-row .picker-status > .btn:hover { color: var(--danger-fg); border-color: var(--danger-border); background: var(--danger-canvas); }
 .picker-toggle.on { background: var(--success-fg); border-color: var(--success-fg); color: #fff; font-weight: 600; }
 
 .segmented-item { transition: background-color .1s ease, color .1s ease; }
@@ -539,7 +563,9 @@ table.list { min-width: 480px; }
 /* ===== exclusions: a path carved back out of a grant ===== */
 .picker-row.is-excluded { background: var(--danger-canvas); }
 .picker-label.struck { text-decoration: line-through; color: var(--fg-muted); }
-.picker-status { display: flex; align-items: center; gap: 8px; flex: none; }
+.picker-status { display: flex; align-items: center; justify-content: flex-end; gap: 8px; flex: none; }
+/* Every row's control occupies the same column, whichever control it is. */
+.picker-row > .segmented, .picker-row > .picker-status { min-width: 252px; }
 .pill {
   display: inline-flex; align-items: center; gap: 4px;
   font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .3px;
