@@ -6,7 +6,9 @@
   "scripts": {
     "studio": "remotion studio",
     "render": "remotion render GitGateLaunch out/gitgate.mp4",
-    "still": "remotion still GitGateLaunch"
+    "still": "remotion still GitGateLaunch",
+    "render:marketing": "remotion render GitGateMarketing out/gitgate-marketing.mp4",
+    "still:marketing": "remotion still GitGateMarketing"
   },
   "dependencies": {
     "@remotion/cli": "4.0.500",

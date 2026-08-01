@@ -4,7 +4,7 @@ import {C, MONO, SANS, Typed, fade, fadeInOut} from './theme';
 
 /* ------------------------------------------------------------------ shared bits */
 
-const Window: React.FC<{
+export const Window: React.FC<{
   title: string;
   accent: string;
   children: React.ReactNode;
@@ -69,7 +69,7 @@ const FileRow: React.FC<{name: string; start: number; color?: string}> = ({
   );
 };
 
-const Caption: React.FC<{children: React.ReactNode; style?: React.CSSProperties}> = ({
+export const Caption: React.FC<{children: React.ReactNode; style?: React.CSSProperties}> = ({
   children,
   style,
 }) => (
@@ -408,7 +408,7 @@ const TitleCard: React.FC = () => {
   );
 };
 
-const Shield: React.FC = () => (
+export const Shield: React.FC = () => (
   <svg width="92" height="92" viewBox="0 0 24 24" fill="none">
     <path
       d="M12 2 4 5v6c0 5 3.4 9.4 8 11 4.6-1.6 8-6 8-11V5l-8-3Z"

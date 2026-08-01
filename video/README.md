@@ -1,18 +1,57 @@
-# GitGate launch video
+# GitGate videos
 
-A 60-second, silent launch clip built with [Remotion](https://remotion.dev) — React components
-rendered to video, so the whole thing is source-controlled and re-renderable.
+Silent films built with [Remotion](https://remotion.dev) — React components rendered to video, so
+they are source-controlled and re-renderable.
+
+| Composition | Length | What it's for |
+|---|---|---|
+| `GitGateLaunch` | 60s | Launch clip: the problem, the three-clone reveal, the proof |
+| `GitGateMarketing` | 90s | Product film: the real UI, who it's for, and what building it took |
 
 ```bash
 cd video
 npm install
-npm run studio      # live editor at :3000, scrub the timeline
-npm run render      # → out/gitgate.mp4  (1920×1080, 30fps, ~4 MB)
+npm run studio             # live editor at :3000, scrub either timeline
+npm run render             # → out/gitgate.mp4            (GitGateLaunch)
+npm run render:marketing   # → out/gitgate-marketing.mp4  (GitGateMarketing)
 ```
 
 Renders land in `out/`, which is gitignored — the source is the artifact here, not the MP4.
 
-## The cut
+## The marketing film
+
+Real screenshots of the running dashboard, not mockups. They live in `public/shots/` and are
+loaded with `staticFile()`.
+
+| Time | Beat |
+|---|---|
+| 0:00 | Every Git host gives you one switch — GitGate gives you one per file |
+| 0:07 | The repository list: this is a server you log into |
+| 0:13 | Settings: one place for who can see what |
+| 0:20 | Permissions by clicking the actual file tree |
+| 0:29 | Grant a folder, keep one file out |
+| 0:39 | Or everything, minus the secrets |
+| 0:47 | Usable on a phone |
+| 0:53 | What it's for: contractor, open project, monorepo |
+| 1:03 | What it took: the five hard parts |
+| 1:17 | Verified, not asserted: 43 tests, 5.2k lines, 320px |
+| 1:23 | Title card |
+
+### Refreshing the screenshots
+
+`public/shots/` is a committed copy, because the source directory is gitignored and would be
+missing from a fresh clone. To update it after a UI change:
+
+```bash
+cd ../frontend && npm run check:responsive      # regenerates responsive-shots/
+cp responsive-shots/settings-*-1280.png ../video/public/shots/    # and the others you use
+```
+
+The `Shot` component pans over a full-page capture using `topFrom`/`topTo` in the PNG's **own
+pixels** — measure the region off the screenshot rather than guessing a fraction. If a capture
+changes height, re-check the framing with `npx remotion still GitGateMarketing out/x.png --frame=N`.
+
+## The launch clip cut
 
 | Time | Beat |
 |---|---|
