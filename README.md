@@ -1,11 +1,18 @@
 # GitGate
 
+[![CI](https://github.com/Boughzala-ayoub/gitgate/actions/workflows/ci.yml/badge.svg)](https://github.com/Boughzala-ayoub/gitgate/actions/workflows/ci.yml)
+![License: BSL 1.1](https://img.shields.io/badge/license-BSL%201.1%20(source--available)-blue)
+
 > **Git can't hide files. GitGate can.**
 
-A self-hostable Git server (Spring Boot + JGit) that enforces **per-user, path-level read/write
+A self-hostable Git server (**Java 21 · Spring Boot · JGit · React**) that enforces **per-user, path-level read/write
 permissions** — server-side, over the wire. Each user clones the *same* repository and receives
-**only the files their ACL allows**. Forbidden objects are never sent, not just hidden in the
-checkout.
+a deterministically rewritten branch history containing **only the files their read ACL allows**, while pushes are
+reconciled back into one canonical repository with out-of-scope writes rejected. *(Source-available under [BSL 1.1](#license), converting to Apache 2.0 after 4 years.)*
+
+<p align="center">
+  <img src="docs/demo.webp" alt="GitGate web UI: per-user path-level ACL tree editor, whole-repo exclusions, and filtered repository view" width="900" />
+</p>
 
 **Elevator pitch:** *GitHub, but with file-level permissions.* Git's data model makes it
 impossible to clone part of a repo — if you can read it, you get all of it. GitGate rewrites

@@ -1,8 +1,6 @@
 # GitGate — File-Level Access Control for Git
 
-> A self-hostable Git server (Spring Boot + JGit) that enforces **per-user, path-level READ and WRITE access control**. Unauthorized users never receive forbidden objects over the wire — security is enforced at the server, not faked on the client.
->
-> *(“GitGate” is a working name — pick a real one before launch. Candidates: GitGate, Sieve, Permit, Warden, Redact.)*
+> A self-hostable Git server (Spring Boot + JGit) that enforces **per-user, path-level READ and WRITE access control**. Unauthorized users never receive forbidden file blobs over the wire — security is enforced at the server, not faked on the client.
 
 ---
 
